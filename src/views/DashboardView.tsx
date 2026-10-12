@@ -1,16 +1,14 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useCamp } from '../context/CampContext';
 import { BentoHero } from '../components/BentoHero';
 import { BentoHighlightEvent } from '../components/BentoHighlightEvent';
 import { BentoWeatherSpots } from '../components/BentoWeatherSpots';
 import { BentoCampStats } from '../components/BentoCampStats';
 import { BentoCampfirePlayer } from '../components/BentoCampfirePlayer';
-import { ApkInstallModal } from '../components/ApkInstallModal';
-import { Bell, ArrowRight, BookOpen, Camera, Sparkles, MapPin, Smartphone, Download, CheckCircle2 } from 'lucide-react';
+import { Bell, ArrowRight, BookOpen, Camera, Sparkles, MapPin } from 'lucide-react';
 
 export const DashboardView: React.FC = () => {
   const { settings, setActiveTab, eventPhotos, soloCampStories } = useCamp();
-  const [apkModalOpen, setApkModalOpen] = useState(false);
 
   // Combine event photos and solo stories for the continuous marquee
   const marqueeItems = [
@@ -104,51 +102,6 @@ export const DashboardView: React.FC = () => {
         </div>
       </div>
 
-      {/* Row 4.5: Pasang di HP / Konversi ke File APK Banner */}
-      <div className="bg-gradient-to-r from-teal-800 via-teal-900 to-slate-900 text-white rounded-3xl border-2 border-slate-900 shadow-[6px_6px_0px_0px_#0f172a] p-6 sm:p-8 relative overflow-hidden">
-        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="space-y-2 max-w-2xl">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-600/60 border border-teal-400/40 text-teal-200 text-xs font-semibold">
-              <Smartphone size={13} className="text-amber-300" />
-              <span>Aplikasi Ponsel Siap Pasang & File .APK</span>
-            </div>
-            <h3 className="text-xl sm:text-2xl font-black tracking-tight text-white">
-              Ingin Buka Aplikasi Ini Langsung dari Layar HP Android?
-            </h3>
-            <p className="text-xs sm:text-sm text-teal-100/90 leading-relaxed">
-              Aplikasi ini sudah berstandar PWA lengkap dengan Web Manifest, Ikon Layar Penuh, dan Cache Offline. Bisa dipasang langsung ke layar HP Anda (WebAPK) tanpa browser bar, atau diubah menjadi file <strong>.APK</strong> native dengan PWABuilder!
-            </p>
-            <div className="flex flex-wrap items-center gap-3 pt-1 text-[11px] text-teal-200">
-              <span className="flex items-center gap-1">
-                <CheckCircle2 size={13} className="text-amber-400" />
-                Ikon & Splash Screen Native
-              </span>
-              <span className="flex items-center gap-1">
-                <CheckCircle2 size={13} className="text-amber-400" />
-                Akses Galeri & Kamera HP
-              </span>
-              <span className="flex items-center gap-1">
-                <CheckCircle2 size={13} className="text-amber-400" />
-                Bisa Dijadikan File .APK
-              </span>
-            </div>
-          </div>
-
-          <div className="shrink-0 flex flex-col sm:flex-row gap-3">
-            <button
-              onClick={() => setApkModalOpen(true)}
-              className="px-6 py-3.5 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs sm:text-sm rounded-2xl border-2 border-slate-900 shadow-[3px_3px_0px_0px_#000] flex items-center justify-center gap-2 transition-transform active:translate-y-0.5 whitespace-nowrap"
-            >
-              <Smartphone className="w-4 h-4 text-slate-950" />
-              <span>Pasang di HP / Buat File .APK</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Ambient glow decoration */}
-        <div className="absolute -right-16 -top-16 w-56 h-56 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
-      </div>
-
       {/* Row 5: AUTO-SCROLLING CONTINUOUS GALLERY SECTION (Tepat di atas Footer Beranda) */}
       <div className="bg-white rounded-3xl border-2 border-slate-900 shadow-[6px_6px_0px_0px_#0f172a] p-6 sm:p-8 overflow-hidden space-y-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -227,12 +180,6 @@ export const DashboardView: React.FC = () => {
           </div>
         </div>
       </div>
-
-      {/* APK / PWA Modal */}
-      <ApkInstallModal
-        isOpen={apkModalOpen}
-        onClose={() => setApkModalOpen(false)}
-      />
     </div>
   );
 };

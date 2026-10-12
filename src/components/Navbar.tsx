@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useCamp, ActiveTab } from '../context/CampContext';
 import { CommunityLogo } from './CampIllustration';
-import { ApkInstallModal } from './ApkInstallModal';
 import { 
   Flame, 
   Volume2, 
@@ -15,8 +14,7 @@ import {
   Menu, 
   X,
   ChevronDown,
-  Mail,
-  Smartphone
+  Mail
 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
@@ -24,7 +22,6 @@ export const Navbar: React.FC = () => {
   const { activeTab, setActiveTab, isCampfirePlaying, toggleCampfireSound, settings } = useCamp();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
-  const [apkModalOpen, setApkModalOpen] = useState(false);
 
   const navLinks: { id: ActiveTab; label: string }[] = [
     { id: 'dashboard', label: 'Beranda' },
@@ -175,16 +172,6 @@ export const Navbar: React.FC = () => {
               )}
             </div>
 
-            {/* Install / APK button */}
-            <button
-              onClick={() => setApkModalOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border-2 border-teal-800 bg-teal-50 hover:bg-teal-100 text-xs font-bold text-teal-900 shadow-[2px_2px_0px_0px_#115e59] transition-transform active:translate-y-0.5"
-              title="Pasang Aplikasi di HP / Buat File APK"
-            >
-              <Smartphone className="w-3.5 h-3.5 text-teal-700" />
-              <span>Pasang / APK</span>
-            </button>
-
             {/* Auth Action */}
             {isLoggedIn && user ? (
               <div className="flex items-center gap-2 pl-1">
@@ -277,18 +264,6 @@ export const Navbar: React.FC = () => {
           </div>
 
           <div className="pt-3 border-t border-slate-200 space-y-3">
-            {/* Install / APK button in mobile menu */}
-            <button
-              onClick={() => {
-                setMobileMenuOpen(false);
-                setApkModalOpen(true);
-              }}
-              className="w-full flex items-center justify-center gap-2 py-2.5 px-3 bg-teal-700 hover:bg-teal-800 text-white rounded-xl font-bold text-xs shadow-md border-2 border-slate-900"
-            >
-              <Smartphone className="w-4 h-4 text-amber-300" />
-              <span>📱 Pasang di HP / Buat File APK</span>
-            </button>
-
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-slate-600">Simulasi Role:</span>
               <div className="flex gap-1">
@@ -345,12 +320,6 @@ export const Navbar: React.FC = () => {
           </div>
         </div>
       )}
-
-      {/* APK / Mobile Install Modal */}
-      <ApkInstallModal
-        isOpen={apkModalOpen}
-        onClose={() => setApkModalOpen(false)}
-      />
     </header>
   );
 };
