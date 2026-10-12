@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f766e" />
+      <stop offset="50%" stop-color="#115e59" />
+      <stop offset="100%" stop-color="#134e4a" />
+    </linearGradient>
+    <linearGradient id="tentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#d97706" />
+    </linearGradient>
+    <linearGradient id="tentFront" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24" />
+      <stop offset="100%" stop-color="#f59e0b" />
+    </linearGradient>
+    <linearGradient id="mountainGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#f1f5f9" />
+      <stop offset="50%" stop-color="#cbd5e1" />
+      <stop offset="100%" stop-color="#64748b" />
+    </linearGradient>
+    <filter id="softShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- Background Canvas -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)" />
+
+  <!-- Stars / Night Sky Dots -->
+  <circle cx="120" cy="90" r="3" fill="#fef08a" opacity="0.8" />
+  <circle cx="390" cy="110" r="3.5" fill="#fef08a" opacity="0.9" />
+  <circle cx="280" cy="70" r="2.5" fill="#fef08a" opacity="0.7" />
+  <circle cx="430" cy="180" r="3" fill="#fef08a" opacity="0.6" />
+  <circle cx="80" cy="190" r="2" fill="#fef08a" opacity="0.5" />
+
+  <!-- Crescent Moon -->
+  <path d="M 370 70 A 32 32 0 0 0 340 120 A 30 30 0 1 1 370 70 Z" fill="#fde047" opacity="0.95" />
+
+  <!-- Distant Mountain Peak (Mount Fuji / Salak style) -->
+  <polygon points="256,120 160,280 352,280" fill="url(#mountainGrad)" opacity="0.7" />
+  <polygon points="256,120 220,180 256,170 292,180" fill="#ffffff" opacity="0.95" />
+
+  <!-- Ground / Hills -->
+  <path d="M 0 380 Q 140 330 256 360 T 512 370 L 512 512 L 0 512 Z" fill="#064e3b" />
+  <path d="M 0 410 Q 160 370 320 400 T 512 410 L 512 512 L 0 512 Z" fill="#022c22" />
+
+  <!-- Campfire Glow -->
+  <circle cx="360" cy="405" r="36" fill="#f59e0b" opacity="0.25" filter="url(#softShadow)" />
+
+  <!-- Tent Outer Shape -->
+  <polygon points="210,240 100,420 320,420" fill="url(#tentGrad)" filter="url(#softShadow)" />
+  <!-- Tent Inner Front Flap Opening -->
+  <polygon points="210,240 165,420 255,420" fill="url(#tentFront)" />
+  <!-- Tent Entrance Shadow / Interior -->
+  <polygon points="210,270 190,420 230,420" fill="#78350f" />
+
+  <!-- Campfire Wood & Flames -->
+  <line x1="345" y1="418" x2="375" y2="408" stroke="#78350f" stroke-width="6" stroke-linecap="round" />
+  <line x1="345" y1="408" x2="375" y2="418" stroke="#78350f" stroke-width="6" stroke-linecap="round" />
+  <!-- Fire Flames -->
+  <path d="M 360 388 Q 368 398 360 412 Q 352 398 360 388 Z" fill="#ef4444" />
+  <path d="M 360 395 Q 365 403 360 412 Q 355 403 360 395 Z" fill="#fbbf24" />
+
+  <!-- Badge Text Ribbon at Bottom -->
+  <rect x="96" y="442" width="320" height="42" rx="21" fill="#f8fafc" />
+  <text x="256" y="469" font-family="'Plus Jakarta Sans', sans-serif" font-weight="800" font-size="19" fill="#0f766e" text-anchor="middle" letter-spacing="1">YURU CAMP JKT</text>
+</svg>
