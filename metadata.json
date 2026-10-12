@@ -1,0 +1,8 @@
+{
+  "name": "Yuru Camp Jabodetabek",
+  "description": "Komunitas pecinta berkemah santai Yuru Camp Jabodetabek. Agenda kemping, panduan outdoor, etika alam, dan kartu anggota resmi.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
