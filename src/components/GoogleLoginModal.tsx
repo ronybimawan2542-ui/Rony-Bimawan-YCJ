@@ -9,7 +9,8 @@ export const GoogleLoginModal: React.FC = () => {
     setLoginWithGoogleModal,
     loginWithCustomGoogle,
     signInWithGoogle,
-    adminEmails
+    adminEmails,
+    quickSwitchRole
   } = useAuth();
   const { registerGoogleUserAsMember } = useCamp();
 
@@ -188,107 +189,76 @@ export const GoogleLoginModal: React.FC = () => {
           ) : activeTab === 'quick' ? (
             <div className="space-y-3">
               <p className="text-xs text-slate-600 leading-relaxed">
-                Cukup klik salah satu akun di bawah untuk masuk. Akun otomatis menjadi anggota dan tampil di halaman Komunitas:
+                Cukup 1x klik pada opsi di bawah ini untuk langsung masuk menggunakan <strong>Akun Tamu Saya</strong>:
               </p>
 
-              {/* Developer / Master Admin Account */}
+              {/* Akun Tamu Saya (Single 1-Click Option) */}
               <button
-                onClick={() => handleQuickLogin('ronybimawan2542@gmail.com', 'Rony Bimawan')}
-                className="w-full text-left p-3.5 rounded-2xl bg-sky-50 border-2 border-sky-400 hover:bg-sky-100 transition-colors flex items-center gap-3.5 group"
+                onClick={() => {
+                  quickSwitchRole('tamu');
+                  setLoginWithGoogleModal(false);
+                }}
+                className="w-full text-left p-4 rounded-2xl bg-amber-50 border-2 border-amber-400 hover:bg-amber-100 transition-colors flex items-center gap-3.5 group shadow-[2px_2px_0px_0px_#0f172a] cursor-pointer"
               >
-                <div className="w-11 h-11 rounded-xl bg-sky-500 border border-slate-900 flex items-center justify-center text-white shrink-0 shadow-xs font-bold text-sm">
-                  RB
+                <div className="w-12 h-12 rounded-xl bg-amber-500 border-2 border-slate-900 flex items-center justify-center text-slate-950 shrink-0 shadow-xs font-black text-sm">
+                  SR
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-slate-900 text-sm truncate">Rony Bimawan</span>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-sky-200 text-sky-800 border border-sky-300">
-                      Lead Developer & Admin
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="font-extrabold text-slate-900 text-sm truncate">Akun Tamu Saya (Shima Rin)</span>
+                    <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-amber-200 text-amber-900 border border-amber-300 shrink-0">
+                      Tamu (Pengunjung Web)
                     </span>
                   </div>
-                  <p className="text-xs text-slate-600 truncate">ronybimawan2542@gmail.com</p>
-                  <p className="text-[11px] text-sky-700 font-medium mt-0.5">
-                    Otoritas penuh konfigurasi web, edit konten & tentukan jabatan anggota
-                  </p>
-                </div>
-              </button>
-
-              {/* Member Nadeshiko */}
-              <button
-                onClick={() => handleQuickLogin('nadeshiko.k@yurucamp.id', 'Nadeshiko Kagamihara')}
-                className="w-full text-left p-3.5 rounded-2xl bg-amber-50 border-2 border-amber-400 hover:bg-amber-100 transition-colors flex items-center gap-3.5 group"
-              >
-                <div className="w-11 h-11 rounded-xl bg-amber-500 border border-slate-900 flex items-center justify-center text-slate-900 shrink-0 shadow-xs font-bold text-sm">
-                  NK
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-slate-900 text-sm truncate">Nadeshiko Kagamihara</span>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-200 text-amber-800 border border-amber-300">
-                      Anggota Komunitas
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-600 truncate">nadeshiko.k@yurucamp.id</p>
-                  <p className="text-[11px] text-amber-800 font-medium mt-0.5">
-                    Otomatis tercatat di daftar anggota komunitas & bisa daftar event
-                  </p>
-                </div>
-              </button>
-
-              {/* Camper Rin Shima */}
-              <button
-                onClick={() => handleQuickLogin('rin.shima.camper@gmail.com', 'Rin Shima')}
-                className="w-full text-left p-3.5 rounded-2xl bg-neutral-50 border-2 border-slate-300 hover:bg-neutral-100 transition-colors flex items-center gap-3.5 group"
-              >
-                <div className="w-11 h-11 rounded-xl bg-slate-800 border border-slate-900 flex items-center justify-center text-white shrink-0 shadow-xs font-bold text-sm">
-                  RS
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-slate-900 text-sm truncate">Rin Shima</span>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-200 text-slate-800 border border-slate-300">
-                      Anggota Komunitas
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-600 truncate">rin.shima.camper@gmail.com</p>
-                  <p className="text-[11px] text-slate-600 font-medium mt-0.5">
-                    Otomatis masuk ke daftar anggota komunitas & berbagi cerita solo camping
+                  <p className="text-xs text-slate-600 truncate">Pilihan cepat 1x klik sebagai pengunjung santai</p>
+                  <p className="text-[11px] text-amber-800 font-medium mt-1">
+                    Langsung aktif melihat event, galeri &amp; komunitas dengan identitas Tamu
                   </p>
                 </div>
               </button>
             </div>
           ) : (
             <form onSubmit={handleCustomSubmit} className="space-y-4">
+              <div className="p-4 bg-emerald-50 rounded-2xl border-2 border-emerald-300 space-y-1.5">
+                <div className="flex items-center gap-2 text-xs font-extrabold text-emerald-950">
+                  <UserCheck className="w-4 h-4 text-emerald-700 shrink-0" />
+                  <span>Semua 99+ Email Anggota Bisa Langsung Masuk!</span>
+                </div>
+                <p className="text-xs text-emerald-900 leading-relaxed">
+                  Tidak perlu diundang satu per satu oleh Admin. Cukup ketik email & nama Anda (atau klik Sign in dengan Google) untuk langsung aktif menjadi Anggota Resmi Yuru Camp Jabodetabek!
+                </p>
+              </div>
+
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Email Akun Google Anda
+                  Email Akun Google / Gmail Anda
                 </label>
                 <input
                   type="email"
                   required
                   value={customEmail}
                   onChange={e => setCustomEmail(e.target.value)}
-                  placeholder="contoh: nama.anda@gmail.com"
+                  placeholder="masukkan email Anda (contoh: anggota99@gmail.com)"
                   className="w-full px-3.5 py-2.5 text-sm bg-neutral-50 border-2 border-slate-900 rounded-xl focus:outline-hidden focus:bg-white focus:border-amber-500"
                 />
                 {isCustomEmailAdmin && (
                   <div className="mt-1.5 flex items-center gap-1.5 text-xs text-sky-700 font-bold bg-sky-100 p-2 rounded-lg border border-sky-300">
                     <ShieldCheck className="w-4 h-4 text-sky-600" />
-                    <span>Email ini terdaftar sebagai ADMIN RESMI / LEAD DEVELOPER!</span>
+                    <span>Email ini terdaftar sebagai LEAD DEVELOPER & ADMIN UTAMA!</span>
                   </div>
                 )}
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Nama Lengkap / Panggilan
+                  Nama Lengkap / Nama Panggilan
                 </label>
                 <input
                   type="text"
                   required
                   value={customName}
                   onChange={e => setCustomName(e.target.value)}
-                  placeholder="contoh: Budi Setiawan"
+                  placeholder="contoh: Budi Setiawan / Rin"
                   className="w-full px-3.5 py-2.5 text-sm bg-neutral-50 border-2 border-slate-900 rounded-xl focus:outline-hidden focus:bg-white focus:border-amber-500"
                 />
               </div>
@@ -296,18 +266,18 @@ export const GoogleLoginModal: React.FC = () => {
               <div className="bg-amber-50 p-3.5 rounded-2xl border-2 border-amber-300 text-xs text-amber-900 space-y-1.5">
                 <div className="flex items-center gap-1.5 font-bold">
                   <Sparkles className="w-4 h-4 text-amber-700" />
-                  <span>Otomatis Masuk Sebagai Anggota Komunitas</span>
+                  <span>Otomatis Terdaftar Sebagai Anggota Resmi</span>
                 </div>
                 <p className="text-[11px] text-amber-800 leading-relaxed">
-                  Tidak perlu lagi mengisi formulir pendaftaran terpisah. Setelah login dengan Google, profil Anda akan langsung tertera di daftar anggota komunitas. Penentuan jabatan khusus (*seperti Koordinator, Admin, Pemandu*) ditentukan oleh Admin dan Lead Developer.
+                  Setelah masuk, profil Anda langsung tertera di daftar Anggota Komunitas. Anda juga dapat mengedit nama & mengunggah foto profil sendiri dari galeri HP Anda kapan saja!
                 </p>
               </div>
 
               <button
                 type="submit"
-                className="w-full py-3 bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold text-sm rounded-xl border-2 border-slate-900 shadow-[2px_2px_0px_0px_#0f172a] transition-transform active:translate-x-0.5 active:translate-y-0.5"
+                className="w-full py-3 bg-amber-500 hover:bg-amber-400 text-slate-900 font-extrabold text-sm rounded-xl border-2 border-slate-900 shadow-[2px_2px_0px_0px_#0f172a] transition-transform active:translate-x-0.5 active:translate-y-0.5 cursor-pointer"
               >
-                Masuk & Gabung Komunitas Sekarang
+                Masuk Langsung & Gabung Komunitas Sekarang
               </button>
             </form>
           )}

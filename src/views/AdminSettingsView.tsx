@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useCamp } from '../context/CampContext';
-import { CampEvent, CampRegion } from '../types';
+import { CampEvent, PastEvent, EventTestimonial, CampRegion } from '../types';
 import { CommunityLogo } from '../components/CampIllustration';
 import { ImageUploadPicker } from '../components/ImageUploadPicker';
 import { 
@@ -25,7 +25,12 @@ import {
   Users,
   Edit3,
   Check,
-  X
+  X,
+  MessageSquare,
+  Star,
+  FileText,
+  Archive,
+  BookOpen
 } from 'lucide-react';
 
 export const AdminSettingsView: React.FC = () => {
@@ -36,6 +41,12 @@ export const AdminSettingsView: React.FC = () => {
     updateEvent,
     updateEventStatus, 
     deleteEvent, 
+    pastEvents,
+    addNewPastEvent,
+    updatePastEvent,
+    deletePastEvent,
+    deleteTestimonialFromPastEvent,
+    updateTestimonialInPastEvent,
     applications, 
     approveApplication, 
     rejectApplication, 
@@ -114,6 +125,123 @@ export const AdminSettingsView: React.FC = () => {
     });
     return init;
   });
+
+  // Sub-tab under Kelola Event (Upcoming vs Past Archive)
+  const [eventSubTab, setEventSubTab] = useState<'upcoming' | 'past'>('upcoming');
+
+  // Edit Past Event Modal State
+  const [editingPastEvent, setEditingPastEvent] = useState<{
+    id: string;
+    title: string;
+    date: string;
+    location: string;
+    region: CampRegion;
+    participantsCount: number;
+    summary: string;
+    story: string;
+    highlightsText: string;
+    imageUrl: string;
+  } | null>(null);
+
+  // Testimonials management modal/drawer state
+  const [managingTestimonialsEventId, setManagingTestimonialsEventId] = useState<string | null>(null);
+  const [editingTestimonial, setEditingTestimonial] = useState<{
+    eventId: string;
+    id: string;
+    comment: string;
+    rating: number;
+  } | null>(null);
+
+  // New Past Event Form State
+  const [newPastEvent, setNewPastEvent] = useState({
+    title: '',
+    date: '10 - 11 Mei 2026',
+    location: '',
+    region: 'Bogor' as CampRegion,
+    participantsCount: 18,
+    summary: 'Kemping Selesai & Sukses Digelar',
+    story: 'Event kemping bersama komunitas Yuru Camp Jabodetabek telah selesai diselenggarakan dengan lancar.',
+    highlightsText: 'Masak nabe bersama\nStargazing malam\nSilaturahmi sesama camper',
+    imageUrl: ''
+  });
+
+  const handleOpenEditPastEvent = (pastEvt: PastEvent) => {
+    setEditingPastEvent({
+      id: pastEvt.id,
+      title: pastEvt.title,
+      date: pastEvt.date,
+      location: pastEvt.location,
+      region: pastEvt.region,
+      participantsCount: pastEvt.participantsCount || 15,
+      summary: pastEvt.summary || '',
+      story: pastEvt.story || '',
+      highlightsText: (pastEvt.highlights || []).join('\n'),
+      imageUrl: pastEvt.imageUrl || ''
+    });
+  };
+
+  const handleSaveEditPastEvent = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingPastEvent) return;
+
+    updatePastEvent(editingPastEvent.id, {
+      title: editingPastEvent.title.trim(),
+      date: editingPastEvent.date.trim(),
+      location: editingPastEvent.location.trim(),
+      region: editingPastEvent.region,
+      participantsCount: Number(editingPastEvent.participantsCount) || 15,
+      summary: editingPastEvent.summary.trim(),
+      story: editingPastEvent.story.trim(),
+      highlights: editingPastEvent.highlightsText.split('\n').map(s => s.trim()).filter(Boolean),
+      imageUrl: editingPastEvent.imageUrl.trim() || undefined
+    });
+
+    setEditingPastEvent(null);
+  };
+
+  const handleCreatePastEvent = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPastEvent.title.trim() || !newPastEvent.location.trim()) return;
+
+    addNewPastEvent({
+      title: newPastEvent.title.trim(),
+      date: newPastEvent.date.trim(),
+      location: newPastEvent.location.trim(),
+      region: newPastEvent.region,
+      participantsCount: Number(newPastEvent.participantsCount) || 15,
+      summary: newPastEvent.summary.trim() || 'Kemping Selesai & Sukses Digelar',
+      story: newPastEvent.story.trim() || 'Event kemping telah selesai diselenggarakan dengan sukses.',
+      highlights: newPastEvent.highlightsText.split('\n').map(s => s.trim()).filter(Boolean),
+      illustrationType: 'campfire',
+      imageUrl: newPastEvent.imageUrl.trim() || undefined
+    });
+
+    setNewPastEvent({
+      title: '',
+      date: '10 - 11 Mei 2026',
+      location: '',
+      region: 'Bogor',
+      participantsCount: 18,
+      summary: 'Kemping Selesai & Sukses Digelar',
+      story: 'Event kemping bersama komunitas Yuru Camp Jabodetabek telah selesai diselenggarakan dengan lancar.',
+      highlightsText: 'Masak nabe bersama\nStargazing malam\nSilaturahmi sesama camper',
+      imageUrl: ''
+    });
+  };
+
+  const handleSaveEditTestimonial = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTestimonial) return;
+
+    updateTestimonialInPastEvent(
+      editingTestimonial.eventId,
+      editingTestimonial.id,
+      editingTestimonial.comment.trim(),
+      editingTestimonial.rating
+    );
+
+    setEditingTestimonial(null);
+  };
 
   // Access guard: Anggota resmi tidak bisa atau tidak memiliki akses untuk mengedit bagian pengaturan admin (Hanya lead developer dan admin yang bisa)
   if (!isAdmin) {
@@ -675,348 +803,604 @@ export const AdminSettingsView: React.FC = () => {
         </div>
       )}
 
-      {/* TAB 3: KELOLA & EDIT AGENDA EVENT */}
+      {/* TAB 3: KELOLA & EDIT AGENDA EVENT (MENDATANG & ARSIP SELESAI / TESTIMONI) */}
       {activeAdminTab === 'events' && (
         <div className="space-y-6">
-          {/* Header Info */}
-          <div className="bg-amber-50 rounded-2xl border-2 border-amber-300 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          {/* Header Info & Sub-tab switcher */}
+          <div className="bg-amber-50 rounded-2xl border-2 border-amber-300 p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900 uppercase">
                 <ShieldCheck className="w-4 h-4 text-amber-700" />
                 <span>Otoritas Khusus Lead Developer & Admin</span>
               </div>
               <h3 className="text-base sm:text-lg font-black text-slate-900 mt-0.5">
-                Pusat Pengeditan Detail Agenda Event
+                Pusat Pengeditan Agenda & Arsip Event Selesai
               </h3>
               <p className="text-xs text-slate-600 mt-0.5">
-                Edit foto banner, kalimat detail (lokasi, harga, tanggal, durasi), serta teks peralatan dan peraturan event. Perubahan akan langsung tampil di halaman Agenda Event.
+                Pantau dan edit agenda event mendatang maupun arsip event selesai beserta testimoni & rating dari para anggota komunitas.
               </p>
             </div>
-            <div className="text-xs font-bold px-3 py-1 bg-white border border-slate-900 rounded-xl text-slate-800 shrink-0">
-              {events.length} Event Terdaftar
+
+            {/* Sub-tab Toggle */}
+            <div className="flex p-1 bg-white rounded-2xl border-2 border-slate-900 shrink-0 self-start md:self-auto">
+              <button
+                type="button"
+                onClick={() => setEventSubTab('upcoming')}
+                className={`px-3.5 py-2 text-xs font-bold rounded-xl transition-colors flex items-center gap-1.5 ${
+                  eventSubTab === 'upcoming'
+                    ? 'bg-amber-500 text-slate-900 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Calendar className="w-3.5 h-3.5" />
+                <span>Event Mendatang ({events.length})</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setEventSubTab('past')}
+                className={`px-3.5 py-2 text-xs font-bold rounded-xl transition-colors flex items-center gap-1.5 ${
+                  eventSubTab === 'past'
+                    ? 'bg-amber-500 text-slate-900 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Archive className="w-3.5 h-3.5" />
+                <span>Arsip Selesai & Testimoni ({pastEvents.length})</span>
+              </button>
             </div>
           </div>
 
-          {/* List of existing events with dedicated Edit, Status, and Delete */}
-          <div className="bg-white rounded-3xl border-2 border-slate-900 shadow-[6px_6px_0px_0px_#0f172a] p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-xs font-bold text-amber-700 uppercase">Daftar Agenda</span>
-                <h3 className="text-xl font-black text-slate-900">
-                  Event Aktif Komunitas ({events.length})
-                </h3>
-              </div>
-              <span className="text-xs text-slate-500 font-medium hidden sm:inline">
-                Klik tombol "Edit Detail Event" untuk mengubah teks, lokasi, harga, peralatan & peraturan.
-              </span>
-            </div>
+          {/* SUB-TAB 1: AGENDA EVENT MENDATANG / AKTIF */}
+          {eventSubTab === 'upcoming' && (
+            <div className="space-y-6">
+              {/* List of existing events with dedicated Edit, Status, and Delete */}
+              <div className="bg-white rounded-3xl border-2 border-slate-900 shadow-[6px_6px_0px_0px_#0f172a] p-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-bold text-amber-700 uppercase">Daftar Agenda Mendatang</span>
+                    <h3 className="text-xl font-black text-slate-900">
+                      Event Aktif Komunitas ({events.length})
+                    </h3>
+                  </div>
+                  <span className="text-xs text-slate-500 font-medium hidden sm:inline">
+                    Klik "Edit Detail Event" untuk mengubah informasi lokasi, harga, peralatan & peraturan.
+                  </span>
+                </div>
 
-            <div className="space-y-3">
-              {events.map(e => (
-                <div
-                  key={e.id}
-                  className="p-4 rounded-2xl border-2 border-slate-200 bg-neutral-50 hover:bg-white transition-colors flex flex-col lg:flex-row lg:items-center justify-between gap-4"
-                >
-                  <div className="flex items-start sm:items-center gap-3.5">
-                    {/* Small Thumbnail Preview */}
-                    <div className="w-20 h-16 rounded-xl border border-slate-900 overflow-hidden bg-slate-200 shrink-0 relative">
-                      {e.imageUrl ? (
-                        <img
-                          src={e.imageUrl}
-                          alt={e.title}
-                          className="w-full h-full object-cover"
-                          onError={(evt) => {
-                            (evt.target as HTMLElement).style.display = 'none';
-                          }}
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-500 font-bold bg-amber-100">
-                          Ilustrasi
+                <div className="space-y-3">
+                  {events.map(e => (
+                    <div
+                      key={e.id}
+                      className="p-4 rounded-2xl border-2 border-slate-200 bg-neutral-50 hover:bg-white transition-colors flex flex-col lg:flex-row lg:items-center justify-between gap-4"
+                    >
+                      <div className="flex items-start sm:items-center gap-3.5">
+                        <div className="w-20 h-16 rounded-xl border border-slate-900 overflow-hidden bg-slate-200 shrink-0 relative">
+                          {e.imageUrl ? (
+                            <img
+                              src={e.imageUrl}
+                              alt={e.title}
+                              className="w-full h-full object-cover"
+                              onError={(evt) => {
+                                (evt.target as HTMLElement).style.display = 'none';
+                              }}
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-500 font-bold bg-amber-100">
+                              Ilustrasi
+                            </div>
+                          )}
                         </div>
-                      )}
+
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h4 className="font-extrabold text-slate-900 text-sm">{e.title}</h4>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-sky-100 text-sky-800 border border-sky-300">
+                              {e.region}
+                            </span>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-300">
+                              {e.duration}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-700 mt-1 flex items-center gap-2 flex-wrap">
+                            <span><strong>Tanggal:</strong> {e.date}</span>
+                            <span>•</span>
+                            <span><strong>Lokasi:</strong> {e.location}</span>
+                            <span>•</span>
+                            <span><strong>Harga:</strong> {e.fee}</span>
+                          </p>
+                          <p className="text-[11px] text-slate-500 mt-1">
+                            👥 {e.registeredUserEmails.length} Peserta Terdaftar · {e.rules ? `${e.rules.length} Peraturan Ditetapkan` : 'Peraturan Standar'}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0 self-end lg:self-auto flex-wrap">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditEvent(e)}
+                          className="px-3.5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold text-xs rounded-xl border-2 border-slate-900 shadow-[2px_2px_0px_0px_#0f172a] flex items-center gap-1.5 transition-transform active:translate-y-0.5"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                          <span>Edit Detail Event</span>
+                        </button>
+
+                        <select
+                          value={e.status}
+                          onChange={val => updateEventStatus(e.id, val.target.value as any)}
+                          className="px-2.5 py-2 text-xs font-bold bg-white border-2 border-slate-300 rounded-xl focus:border-slate-900"
+                        >
+                          <option value="open">Buka (Open)</option>
+                          <option value="closed">Ditutup (Closed)</option>
+                          <option value="completed">Selesai (Completed)</option>
+                        </select>
+
+                        <button
+                          type="button"
+                          onClick={() => deleteEvent(e.id)}
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-xl border border-transparent hover:border-red-200 transition-colors"
+                          title="Hapus Event"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Add New Event Form */}
+              <div className="bg-white rounded-3xl border-2 border-slate-900 shadow-[6px_6px_0px_0px_#0f172a] p-6 space-y-4">
+                <div>
+                  <span className="text-xs font-bold text-amber-700 uppercase">Tambah Agenda Baru</span>
+                  <h3 className="text-xl font-bold text-slate-900 mt-0.5">
+                    Formulir Pembuatan Event Baru
+                  </h3>
+                  <p className="text-xs text-slate-600 mt-0.5">
+                    Isi rincian lengkap termasuk lokasi, harga, tanggal, durasi kemping, serta teks peralatan dan peraturan event.
+                  </p>
+                </div>
+
+                <form onSubmit={handleCreateEvent} className="space-y-4 pt-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Judul Event *</label>
+                      <input
+                        type="text"
+                        required
+                        value={newEvent.title}
+                        onChange={e => setNewEvent({ ...newEvent, title: e.target.value })}
+                        placeholder="contoh: Sukamantri Starry Night & Citylight"
+                        className="w-full px-3.5 py-2.5 text-xs bg-neutral-50 border-2 border-slate-900 rounded-xl focus:outline-hidden"
+                      />
                     </div>
 
                     <div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h4 className="font-extrabold text-slate-900 text-sm">{e.title}</h4>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-sky-100 text-sky-800 border border-sky-300">
-                          {e.region}
-                        </span>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-300">
-                          {e.duration}
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-700 mt-1 flex items-center gap-2 flex-wrap">
-                        <span><strong>Tanggal:</strong> {e.date}</span>
-                        <span>•</span>
-                        <span><strong>Lokasi:</strong> {e.location}</span>
-                        <span>•</span>
-                        <span><strong>Harga:</strong> {e.fee}</span>
-                      </p>
-                      <p className="text-[11px] text-slate-500 mt-1">
-                        👥 {e.registeredUserEmails.length} Peserta Terdaftar · {e.rules ? `${e.rules.length} Peraturan Ditetapkan` : 'Peraturan Standar'}
-                      </p>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Subjudul / Tagline Singkat</label>
+                      <input
+                        type="text"
+                        value={newEvent.subtitle}
+                        onChange={e => setNewEvent({ ...newEvent, subtitle: e.target.value })}
+                        placeholder="contoh: Menikmati heningnya kaki Gunung Salak dengan pemandangan kerlap-kerlip kota"
+                        className="w-full px-3.5 py-2.5 text-xs bg-neutral-50 border-2 border-slate-900 rounded-xl focus:outline-hidden"
+                      />
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 shrink-0 self-end lg:self-auto flex-wrap">
-                    {/* Edit Detail Button */}
-                    <button
-                      type="button"
-                      onClick={() => handleOpenEditEvent(e)}
-                      className="px-3.5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold text-xs rounded-xl border-2 border-slate-900 shadow-[2px_2px_0px_0px_#0f172a] flex items-center gap-1.5 transition-transform active:translate-y-0.5"
-                    >
-                      <Edit3 className="w-3.5 h-3.5" />
-                      <span>Edit Detail Event</span>
-                    </button>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Lokasi Camping Ground *</label>
+                      <input
+                        type="text"
+                        required
+                        value={newEvent.location}
+                        onChange={e => setNewEvent({ ...newEvent, location: e.target.value })}
+                        placeholder="contoh: Buper Sukamantri, TN Gunung Halimun Salak"
+                        className="w-full px-3.5 py-2.5 text-xs bg-neutral-50 border-2 border-slate-900 rounded-xl focus:outline-hidden"
+                      />
+                    </div>
 
-                    {/* Status Dropdown */}
-                    <select
-                      value={e.status}
-                      onChange={val => updateEventStatus(e.id, val.target.value as any)}
-                      className="px-2.5 py-2 text-xs font-bold bg-white border-2 border-slate-300 rounded-xl focus:border-slate-900"
-                    >
-                      <option value="open">Buka (Open)</option>
-                      <option value="closed">Ditutup (Closed)</option>
-                      <option value="completed">Selesai (Completed)</option>
-                    </select>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Harga / Biaya Patungan *</label>
+                      <input
+                        type="text"
+                        required
+                        value={newEvent.fee}
+                        onChange={e => setNewEvent({ ...newEvent, fee: e.target.value })}
+                        placeholder="contoh: Rp 50.000 / orang (Kavling + Kayu Bakar)"
+                        className="w-full px-3.5 py-2.5 text-xs bg-neutral-50 border-2 border-slate-900 rounded-xl focus:outline-hidden"
+                      />
+                    </div>
 
-                    {/* Delete Button */}
-                    <button
-                      type="button"
-                      onClick={() => deleteEvent(e.id)}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded-xl border border-transparent hover:border-red-200 transition-colors"
-                      title="Hapus Event"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Tanggal Event *</label>
+                      <input
+                        type="text"
+                        required
+                        value={newEvent.date}
+                        onChange={e => setNewEvent({ ...newEvent, date: e.target.value })}
+                        placeholder="contoh: 12 - 13 Desember 2026"
+                        className="w-full px-3.5 py-2.5 text-xs bg-neutral-50 border-2 border-slate-900 rounded-xl focus:outline-hidden"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Durasi Event Berlangsung *</label>
+                      <input
+                        type="text"
+                        required
+                        value={newEvent.duration}
+                        onChange={e => setNewEvent({ ...newEvent, duration: e.target.value })}
+                        placeholder="contoh: 2 Hari 1 Malam (Weekend)"
+                        className="w-full px-3.5 py-2.5 text-xs bg-neutral-50 border-2 border-slate-900 rounded-xl focus:outline-hidden"
+                      />
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          </div>
 
-          {/* Add New Event Form */}
-          <div className="bg-white rounded-3xl border-2 border-slate-900 shadow-[6px_6px_0px_0px_#0f172a] p-6 space-y-4">
-            <div>
-              <span className="text-xs font-bold text-amber-700 uppercase">Tambah Agenda Baru</span>
-              <h3 className="text-xl font-bold text-slate-900 mt-0.5">
-                Formulir Pembuatan Event Baru
-              </h3>
-              <p className="text-xs text-slate-600 mt-0.5">
-                Isi rincian lengkap termasuk lokasi, harga, tanggal, durasi kemping, serta teks peralatan dan peraturan event.
-              </p>
-            </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Wilayah *</label>
+                      <select
+                        value={newEvent.region}
+                        onChange={e => setNewEvent({ ...newEvent, region: e.target.value as CampRegion })}
+                        className="w-full px-3.5 py-2.5 text-xs bg-neutral-50 border-2 border-slate-900 rounded-xl focus:outline-hidden"
+                      >
+                        <option value="Bogor">Bogor</option>
+                        <option value="Cibodas">Cibodas</option>
+                        <option value="Sukabumi">Sukabumi</option>
+                        <option value="Sentul">Sentul</option>
+                        <option value="Puncak">Puncak</option>
+                        <option value="Kepulauan Seribu">Kepulauan Seribu</option>
+                      </select>
+                    </div>
 
-            <form onSubmit={handleCreateEvent} className="space-y-4 pt-2">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Judul Event *</label>
-                  <input
-                    type="text"
-                    required
-                    value={newEvent.title}
-                    onChange={e => setNewEvent({ ...newEvent, title: e.target.value })}
-                    placeholder="contoh: Sukamantri Starry Night & Citylight"
-                    className="w-full px-3.5 py-2.5 text-xs bg-neutral-50 border-2 border-slate-900 rounded-xl focus:outline-hidden"
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Ketinggian Tempat</label>
+                      <input
+                        type="text"
+                        value={newEvent.altitude}
+                        onChange={e => setNewEvent({ ...newEvent, altitude: e.target.value })}
+                        placeholder="contoh: 1.000 mdpl"
+                        className="w-full px-3.5 py-2.5 text-xs bg-neutral-50 border-2 border-slate-900 rounded-xl focus:outline-hidden"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Titik Kumpul (Meeting Point)</label>
+                      <input
+                        type="text"
+                        value={newEvent.meetingPoint}
+                        onChange={e => setNewEvent({ ...newEvent, meetingPoint: e.target.value })}
+                        placeholder="contoh: Simpang Ciawi Bogor pukul 09.00 WIB"
+                        className="w-full px-3.5 py-2.5 text-xs bg-neutral-50 border-2 border-slate-900 rounded-xl focus:outline-hidden"
+                      />
+                    </div>
+                  </div>
+
+                  <ImageUploadPicker
+                    value={newEvent.imageUrl}
+                    onChange={url => setNewEvent({ ...newEvent, imageUrl: url })}
+                    label="Foto Banner Event (Galeri HP / Kamera)"
+                    placeholder="https://images.unsplash.com/... atau pilih dari galeri ponsel"
+                    presets={samplePhotoPresets}
+                    helperText="Mendukung upload foto dari galeri HP atau kamera (jika kosong menggunakan ilustrasi flat)"
                   />
-                </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Subjudul / Tagline Singkat</label>
-                  <input
-                    type="text"
-                    value={newEvent.subtitle}
-                    onChange={e => setNewEvent({ ...newEvent, subtitle: e.target.value })}
-                    placeholder="contoh: Menikmati heningnya kaki Gunung Salak dengan pemandangan kerlap-kerlip kota"
-                    className="w-full px-3.5 py-2.5 text-xs bg-neutral-50 border-2 border-slate-900 rounded-xl focus:outline-hidden"
-                  />
-                </div>
-              </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Kalimat Deskripsi Lengkap Acara</label>
+                      <textarea
+                        rows={3}
+                        value={newEvent.description}
+                        onChange={e => setNewEvent({ ...newEvent, description: e.target.value })}
+                        placeholder="Ceritakan rencana kemping, suasana lokasi, dan agenda santai..."
+                        className="w-full px-3.5 py-2.5 text-xs bg-neutral-50 border-2 border-slate-900 rounded-xl focus:outline-hidden"
+                      />
+                    </div>
 
-              {/* Detail Event: Lokasi, Harga, Tanggal, Durasi */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Lokasi Camping Ground *</label>
-                  <input
-                    type="text"
-                    required
-                    value={newEvent.location}
-                    onChange={e => setNewEvent({ ...newEvent, location: e.target.value })}
-                    placeholder="contoh: Buper Sukamantri, TN Gunung Halimun Salak"
-                    className="w-full px-3.5 py-2.5 text-xs bg-neutral-50 border-2 border-slate-900 rounded-xl focus:outline-hidden"
-                  />
-                </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Sorotan Aktivitas (1 baris per poin)</label>
+                      <textarea
+                        rows={3}
+                        value={newEvent.highlightsText}
+                        onChange={e => setNewEvent({ ...newEvent, highlightsText: e.target.value })}
+                        placeholder="Masak ramen nabe bersama&#10;Stargazing malam&#10;Workshop pasang flysheet"
+                        className="w-full px-3.5 py-2.5 text-xs bg-neutral-50 border-2 border-slate-900 rounded-xl focus:outline-hidden"
+                      />
+                    </div>
+                  </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Harga / Biaya Patungan *</label>
-                  <input
-                    type="text"
-                    required
-                    value={newEvent.fee}
-                    onChange={e => setNewEvent({ ...newEvent, fee: e.target.value })}
-                    placeholder="contoh: Rp 50.000 / orang (Kavling + Kayu Bakar)"
-                    className="w-full px-3.5 py-2.5 text-xs bg-neutral-50 border-2 border-slate-900 rounded-xl focus:outline-hidden"
-                  />
-                </div>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pt-1">
+                    <div className="p-4 bg-amber-50/60 rounded-2xl border-2 border-amber-300 space-y-2">
+                      <label className="block text-xs font-bold text-amber-950">
+                        🎒 Teks Peralatan Wajib & Rekomendasi (1 baris per alat) *
+                      </label>
+                      <textarea
+                        rows={4}
+                        value={newEvent.requiredGearText}
+                        onChange={e => setNewEvent({ ...newEvent, requiredGearText: e.target.value })}
+                        placeholder="Tenda double layer&#10;Sleeping bag rating 15°C&#10;Matras aluminium foil&#10;Headlamp cadangan"
+                        className="w-full px-3.5 py-2.5 text-xs bg-white border-2 border-slate-900 rounded-xl focus:outline-hidden"
+                      />
+                      <div>
+                        <label className="block text-[11px] font-bold text-amber-900 mb-1">
+                          Catatan Tambahan Peralatan (Opsional)
+                        </label>
+                        <input
+                          type="text"
+                          value={newEvent.equipmentNotes}
+                          onChange={e => setNewEvent({ ...newEvent, equipmentNotes: e.target.value })}
+                          placeholder="contoh: Suhu malam bisa 13°C, siapkan jaket fleece tebal."
+                          className="w-full px-3 py-2 text-xs bg-white border border-slate-400 rounded-lg"
+                        />
+                      </div>
+                    </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Tanggal Event *</label>
-                  <input
-                    type="text"
-                    required
-                    value={newEvent.date}
-                    onChange={e => setNewEvent({ ...newEvent, date: e.target.value })}
-                    placeholder="contoh: 12 - 13 Desember 2026"
-                    className="w-full px-3.5 py-2.5 text-xs bg-neutral-50 border-2 border-slate-900 rounded-xl focus:outline-hidden"
-                  />
-                </div>
+                    <div className="p-4 bg-sky-50/60 rounded-2xl border-2 border-sky-300 space-y-2">
+                      <label className="block text-xs font-bold text-sky-950">
+                        🛡️ Teks Peraturan Event (1 baris per aturan) *
+                      </label>
+                      <textarea
+                        rows={6}
+                        value={newEvent.rulesText}
+                        onChange={e => setNewEvent({ ...newEvent, rulesText: e.target.value })}
+                        placeholder="Etika Leave No Trace: Bawa pulang semua sampah tanpa terkecuali&#10;Batas Waktu Hening (Quiet Hours) mulai pukul 22.00 WIB&#10;Dilarang membuat api langsung di atas rumput tanpa fire pit&#10;Saling menjaga toleransi dan ketenangan sesama camper"
+                        className="w-full px-3.5 py-2.5 text-xs bg-white border-2 border-slate-900 rounded-xl focus:outline-hidden"
+                      />
+                    </div>
+                  </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Durasi Event Berlangsung *</label>
-                  <input
-                    type="text"
-                    required
-                    value={newEvent.duration}
-                    onChange={e => setNewEvent({ ...newEvent, duration: e.target.value })}
-                    placeholder="contoh: 2 Hari 1 Malam (Weekend)"
-                    className="w-full px-3.5 py-2.5 text-xs bg-neutral-50 border-2 border-slate-900 rounded-xl focus:outline-hidden"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Wilayah *</label>
-                  <select
-                    value={newEvent.region}
-                    onChange={e => setNewEvent({ ...newEvent, region: e.target.value as CampRegion })}
-                    className="w-full px-3.5 py-2.5 text-xs bg-neutral-50 border-2 border-slate-900 rounded-xl focus:outline-hidden"
+                  <button
+                    type="submit"
+                    className="px-6 py-3 bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold text-xs rounded-xl border-2 border-slate-900 shadow-[3px_3px_0px_0px_#0f172a] transition-transform active:translate-y-0.5 flex items-center gap-2"
                   >
-                    <option value="Bogor">Bogor</option>
-                    <option value="Cibodas">Cibodas</option>
-                    <option value="Sukabumi">Sukabumi</option>
-                    <option value="Sentul">Sentul</option>
-                    <option value="Puncak">Puncak</option>
-                    <option value="Kepulauan Seribu">Kepulauan Seribu</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Ketinggian Tempat</label>
-                  <input
-                    type="text"
-                    value={newEvent.altitude}
-                    onChange={e => setNewEvent({ ...newEvent, altitude: e.target.value })}
-                    placeholder="contoh: 1.000 mdpl"
-                    className="w-full px-3.5 py-2.5 text-xs bg-neutral-50 border-2 border-slate-900 rounded-xl focus:outline-hidden"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Titik Kumpul (Meeting Point)</label>
-                  <input
-                    type="text"
-                    value={newEvent.meetingPoint}
-                    onChange={e => setNewEvent({ ...newEvent, meetingPoint: e.target.value })}
-                    placeholder="contoh: Simpang Ciawi Bogor pukul 09.00 WIB"
-                    className="w-full px-3.5 py-2.5 text-xs bg-neutral-50 border-2 border-slate-900 rounded-xl focus:outline-hidden"
-                  />
-                </div>
+                    <PlusCircle className="w-4 h-4" />
+                    <span>Publikasikan Agenda Event Baru</span>
+                  </button>
+                </form>
               </div>
+            </div>
+          )}
 
-              {/* Foto Event: Pilih dari Galeri HP / Kamera atau URL */}
-              <ImageUploadPicker
-                value={newEvent.imageUrl}
-                onChange={url => setNewEvent({ ...newEvent, imageUrl: url })}
-                label="Foto Banner Event (Galeri HP / Kamera)"
-                placeholder="https://images.unsplash.com/... atau pilih dari galeri ponsel"
-                presets={samplePhotoPresets}
-                helperText="Mendukung upload foto dari galeri HP atau kamera (jika kosong menggunakan ilustrasi flat)"
-              />
-
-              {/* Deskripsi & Highlights */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Kalimat Deskripsi Lengkap Acara</label>
-                  <textarea
-                    rows={3}
-                    value={newEvent.description}
-                    onChange={e => setNewEvent({ ...newEvent, description: e.target.value })}
-                    placeholder="Ceritakan rencana kemping, suasana lokasi, dan agenda santai..."
-                    className="w-full px-3.5 py-2.5 text-xs bg-neutral-50 border-2 border-slate-900 rounded-xl focus:outline-hidden"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Sorotan Aktivitas (1 baris per poin)</label>
-                  <textarea
-                    rows={3}
-                    value={newEvent.highlightsText}
-                    onChange={e => setNewEvent({ ...newEvent, highlightsText: e.target.value })}
-                    placeholder="Masak ramen nabe bersama&#10;Stargazing malam&#10;Workshop pasang flysheet"
-                    className="w-full px-3.5 py-2.5 text-xs bg-neutral-50 border-2 border-slate-900 rounded-xl focus:outline-hidden"
-                  />
-                </div>
-              </div>
-
-              {/* Teks Peralatan & Peraturan Event */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pt-1">
-                {/* Peralatan */}
-                <div className="p-4 bg-amber-50/60 rounded-2xl border-2 border-amber-300 space-y-2">
-                  <label className="block text-xs font-bold text-amber-950">
-                    🎒 Teks Peralatan Wajib & Rekomendasi (1 baris per alat) *
-                  </label>
-                  <textarea
-                    rows={4}
-                    value={newEvent.requiredGearText}
-                    onChange={e => setNewEvent({ ...newEvent, requiredGearText: e.target.value })}
-                    placeholder="Tenda double layer&#10;Sleeping bag rating 15°C&#10;Matras aluminium foil&#10;Headlamp cadangan"
-                    className="w-full px-3.5 py-2.5 text-xs bg-white border-2 border-slate-900 rounded-xl focus:outline-hidden"
-                  />
+          {/* SUB-TAB 2: ARSIP EVENT SELESAI & TESTIMONI */}
+          {eventSubTab === 'past' && (
+            <div className="space-y-6">
+              {/* List of Archived Events */}
+              <div className="bg-white rounded-3xl border-2 border-slate-900 shadow-[6px_6px_0px_0px_#0f172a] p-6 space-y-4">
+                <div className="flex items-center justify-between">
                   <div>
-                    <label className="block text-[11px] font-bold text-amber-900 mb-1">
-                      Catatan Tambahan Peralatan (Opsional)
-                    </label>
-                    <input
-                      type="text"
-                      value={newEvent.equipmentNotes}
-                      onChange={e => setNewEvent({ ...newEvent, equipmentNotes: e.target.value })}
-                      placeholder="contoh: Suhu malam bisa 13°C, siapkan jaket fleece tebal."
-                      className="w-full px-3 py-2 text-xs bg-white border border-slate-400 rounded-lg"
-                    />
+                    <span className="text-xs font-bold text-amber-700 uppercase">Dokumentasi Event Selesai</span>
+                    <h3 className="text-xl font-black text-slate-900">
+                      Kelola Arsip Selesai & Testimoni ({pastEvents.length} Event)
+                    </h3>
                   </div>
-                </div>
-
-                {/* Peraturan */}
-                <div className="p-4 bg-sky-50/60 rounded-2xl border-2 border-sky-300 space-y-2">
-                  <label className="block text-xs font-bold text-sky-950">
-                    🛡️ Teks Peraturan Event (1 baris per aturan) *
-                  </label>
-                  <textarea
-                    rows={6}
-                    value={newEvent.rulesText}
-                    onChange={e => setNewEvent({ ...newEvent, rulesText: e.target.value })}
-                    placeholder="Etika Leave No Trace: Bawa pulang semua sampah tanpa terkecuali&#10;Batas Waktu Hening (Quiet Hours) mulai pukul 22.00 WIB&#10;Dilarang membuat api langsung di atas rumput tanpa fire pit&#10;Saling menjaga toleransi dan ketenangan sesama camper"
-                    className="w-full px-3.5 py-2.5 text-xs bg-white border-2 border-slate-900 rounded-xl focus:outline-hidden"
-                  />
-                  <span className="text-[10px] text-sky-800 block">
-                    *Hanya Lead Developer dan Admin yang dapat menentukan & mengedit peraturan event ini.
+                  <span className="text-xs text-slate-500 font-medium hidden sm:inline">
+                    Admin dapat mengedit cerita, foto cover, serta memantau & mengedit testimoni dari para anggota.
                   </span>
                 </div>
+
+                <div className="space-y-3">
+                  {pastEvents.map(p => {
+                    const testCount = p.testimonials?.length || 0;
+                    return (
+                      <div
+                        key={p.id}
+                        className="p-4 rounded-2xl border-2 border-slate-200 bg-neutral-50 hover:bg-white transition-colors flex flex-col lg:flex-row lg:items-center justify-between gap-4"
+                      >
+                        <div className="flex items-start sm:items-center gap-3.5">
+                          <div className="w-20 h-16 rounded-xl border border-slate-900 overflow-hidden bg-slate-200 shrink-0 relative">
+                            {p.imageUrl ? (
+                              <img
+                                src={p.imageUrl}
+                                alt={p.title}
+                                className="w-full h-full object-cover"
+                                onError={(evt) => {
+                                  (evt.target as HTMLElement).style.display = 'none';
+                                }}
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-500 font-bold bg-amber-100">
+                                Arsip
+                              </div>
+                            )}
+                          </div>
+
+                          <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h4 className="font-extrabold text-slate-900 text-sm">{p.title}</h4>
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                Selesai
+                              </span>
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-sky-100 text-sky-800 border border-sky-300">
+                                {p.region}
+                              </span>
+                            </div>
+                            <p className="text-xs text-slate-700 mt-1 flex items-center gap-2 flex-wrap">
+                              <span><strong>Tanggal:</strong> {p.date}</span>
+                              <span>•</span>
+                              <span><strong>Lokasi:</strong> {p.location}</span>
+                              <span>•</span>
+                              <span><strong>Peserta:</strong> {p.participantsCount} orang</span>
+                            </p>
+                            <p className="text-[11px] text-slate-500 mt-1 truncate max-w-xl">
+                              💬 <strong>{testCount} Testimoni Masuk</strong> — {p.summary}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0 self-end lg:self-auto flex-wrap">
+                          {/* Edit Past Event Detail */}
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditPastEvent(p)}
+                            className="px-3.5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold text-xs rounded-xl border-2 border-slate-900 shadow-[2px_2px_0px_0px_#0f172a] flex items-center gap-1.5 transition-transform active:translate-y-0.5"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                            <span>Edit Detail Arsip</span>
+                          </button>
+
+                          {/* Manage Testimonials */}
+                          <button
+                            type="button"
+                            onClick={() => setManagingTestimonialsEventId(p.id)}
+                            className="px-3.5 py-2 bg-sky-500 hover:bg-sky-400 text-white font-bold text-xs rounded-xl border-2 border-slate-900 shadow-[2px_2px_0px_0px_#0f172a] flex items-center gap-1.5 transition-transform active:translate-y-0.5"
+                          >
+                            <MessageSquare className="w-3.5 h-3.5" />
+                            <span>Pantau Testimoni ({testCount})</span>
+                          </button>
+
+                          {/* Delete Past Event */}
+                          <button
+                            type="button"
+                            onClick={() => deletePastEvent(p.id)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-xl border border-transparent hover:border-red-200 transition-colors"
+                            title="Hapus Arsip Event"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
 
-              <button
-                type="submit"
-                className="px-6 py-3 bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold text-xs rounded-xl border-2 border-slate-900 shadow-[3px_3px_0px_0px_#0f172a] transition-transform active:translate-y-0.5 flex items-center gap-2"
-              >
-                <PlusCircle className="w-4 h-4" />
-                <span>Publikasikan Agenda Event Baru</span>
-              </button>
-            </form>
-          </div>
+              {/* Form Manual Tambah Arsip Event Selesai */}
+              <div className="bg-white rounded-3xl border-2 border-slate-900 shadow-[6px_6px_0px_0px_#0f172a] p-6 space-y-4">
+                <div>
+                  <span className="text-xs font-bold text-amber-700 uppercase">Selesai & Historis</span>
+                  <h3 className="text-xl font-bold text-slate-900 mt-0.5">
+                    Formulir Tambah Arsip Event Selesai Manual
+                  </h3>
+                  <p className="text-xs text-slate-600 mt-0.5">
+                    Gunakan formulir ini untuk menambahkan rekam jejak event kemping terdahulu agar bisa dipantau dan diberi testimoni oleh anggota.
+                  </p>
+                </div>
 
-          {/* EDIT EVENT MODAL (COMPREHENSIVE) */}
+                <form onSubmit={handleCreatePastEvent} className="space-y-4 pt-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Judul Event Selesai *</label>
+                      <input
+                        type="text"
+                        required
+                        value={newPastEvent.title}
+                        onChange={e => setNewPastEvent({ ...newPastEvent, title: e.target.value })}
+                        placeholder="contoh: Cibodas Autumn Stargazing Camp"
+                        className="w-full px-3.5 py-2.5 text-xs bg-neutral-50 border-2 border-slate-900 rounded-xl focus:outline-hidden"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Tanggal Diselenggarakan *</label>
+                      <input
+                        type="text"
+                        required
+                        value={newPastEvent.date}
+                        onChange={e => setNewPastEvent({ ...newPastEvent, date: e.target.value })}
+                        placeholder="contoh: 10 - 11 Mei 2026"
+                        className="w-full px-3.5 py-2.5 text-xs bg-neutral-50 border-2 border-slate-900 rounded-xl focus:outline-hidden"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Lokasi Camping Ground *</label>
+                      <input
+                        type="text"
+                        required
+                        value={newPastEvent.location}
+                        onChange={e => setNewPastEvent({ ...newPastEvent, location: e.target.value })}
+                        placeholder="contoh: Bukit Golf Cibodas"
+                        className="w-full px-3.5 py-2.5 text-xs bg-neutral-50 border-2 border-slate-900 rounded-xl focus:outline-hidden"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Wilayah *</label>
+                      <select
+                        value={newPastEvent.region}
+                        onChange={e => setNewPastEvent({ ...newPastEvent, region: e.target.value as CampRegion })}
+                        className="w-full px-3.5 py-2.5 text-xs bg-neutral-50 border-2 border-slate-900 rounded-xl focus:outline-hidden"
+                      >
+                        <option value="Bogor">Bogor</option>
+                        <option value="Cibodas">Cibodas</option>
+                        <option value="Sukabumi">Sukabumi</option>
+                        <option value="Sentul">Sentul</option>
+                        <option value="Puncak">Puncak</option>
+                        <option value="Kepulauan Seribu">Kepulauan Seribu</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Jumlah Peserta Hadir</label>
+                      <input
+                        type="number"
+                        value={newPastEvent.participantsCount}
+                        onChange={e => setNewPastEvent({ ...newPastEvent, participantsCount: Number(e.target.value) })}
+                        placeholder="18"
+                        className="w-full px-3.5 py-2.5 text-xs bg-neutral-50 border-2 border-slate-900 rounded-xl focus:outline-hidden"
+                      />
+                    </div>
+                  </div>
+
+                  <ImageUploadPicker
+                    value={newPastEvent.imageUrl}
+                    onChange={url => setNewPastEvent({ ...newPastEvent, imageUrl: url })}
+                    label="Foto Cover Dokumentasi Event (Galeri HP / Kamera)"
+                    placeholder="https://... atau pilih dari galeri ponsel"
+                    presets={samplePhotoPresets}
+                    helperText="Foto utama dokumentasi yang akan tampil di halaman Arsip Selesai"
+                  />
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Ringkasan Singkat Kesuksesan Event</label>
+                      <input
+                        type="text"
+                        value={newPastEvent.summary}
+                        onChange={e => setNewPastEvent({ ...newPastEvent, summary: e.target.value })}
+                        placeholder="contoh: Diikuti 18 peserta dengan kehangatan api unggun dan nabe malam"
+                        className="w-full px-3.5 py-2.5 text-xs bg-neutral-50 border-2 border-slate-900 rounded-xl focus:outline-hidden"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Sorotan Kegiatan (1 baris per poin)</label>
+                      <textarea
+                        rows={2}
+                        value={newPastEvent.highlightsText}
+                        onChange={e => setNewPastEvent({ ...newPastEvent, highlightsText: e.target.value })}
+                        placeholder="Masak nabe bersama&#10;Stargazing malam&#10;Kopi Pagi"
+                        className="w-full px-3.5 py-2.5 text-xs bg-neutral-50 border-2 border-slate-900 rounded-xl focus:outline-hidden"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Ulasan / Cerita Lengkap Dokumentasi Event</label>
+                    <textarea
+                      rows={3}
+                      value={newPastEvent.story}
+                      onChange={e => setNewPastEvent({ ...newPastEvent, story: e.target.value })}
+                      placeholder="Ceritakan momen seru selama kemping berlangsung..."
+                      className="w-full px-3.5 py-2.5 text-xs bg-neutral-50 border-2 border-slate-900 rounded-xl focus:outline-hidden"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="px-6 py-3 bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold text-xs rounded-xl border-2 border-slate-900 shadow-[3px_3px_0px_0px_#0f172a] transition-transform active:translate-y-0.5 flex items-center gap-2"
+                  >
+                    <PlusCircle className="w-4 h-4" />
+                    <span>Tambahkan ke Arsip Event Selesai</span>
+                  </button>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* EDIT ACTIVE EVENT MODAL */}
           {editingEvent && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs">
               <div className="relative w-full max-w-3xl bg-white rounded-3xl border-2 border-slate-900 shadow-[8px_8px_0px_0px_#0f172a] max-h-[92vh] overflow-y-auto">
@@ -1042,7 +1426,6 @@ export const AdminSettingsView: React.FC = () => {
                 </div>
 
                 <form onSubmit={handleSaveEditEvent} className="p-6 space-y-6">
-                  {/* SEKSI 1: FOTO EVENT */}
                   <div className="p-4 bg-neutral-50 rounded-2xl border-2 border-slate-300 space-y-3">
                     <div className="flex items-center justify-between">
                       <label className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
@@ -1070,7 +1453,6 @@ export const AdminSettingsView: React.FC = () => {
                     />
                   </div>
 
-                  {/* SEKSI 2: KALIMAT DETAIL EVENT (LOKASI, HARGA, TANGGAL, DURASI, DESKRIPSI) */}
                   <div className="space-y-4">
                     <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
                       <Type className="w-4 h-4 text-amber-600" />
@@ -1101,7 +1483,6 @@ export const AdminSettingsView: React.FC = () => {
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                      {/* LOKASI */}
                       <div>
                         <label className="block text-xs font-bold text-slate-700 mb-1">Lokasi Camping Ground *</label>
                         <input
@@ -1113,7 +1494,6 @@ export const AdminSettingsView: React.FC = () => {
                         />
                       </div>
 
-                      {/* HARGA */}
                       <div>
                         <label className="block text-xs font-bold text-slate-700 mb-1">Harga / Biaya Patungan *</label>
                         <input
@@ -1125,7 +1505,6 @@ export const AdminSettingsView: React.FC = () => {
                         />
                       </div>
 
-                      {/* TANGGAL */}
                       <div>
                         <label className="block text-xs font-bold text-slate-700 mb-1">Tanggal Event *</label>
                         <input
@@ -1137,7 +1516,6 @@ export const AdminSettingsView: React.FC = () => {
                         />
                       </div>
 
-                      {/* DURASI */}
                       <div>
                         <label className="block text-xs font-bold text-slate-700 mb-1">Durasi Event Berlangsung *</label>
                         <input
@@ -1211,7 +1589,6 @@ export const AdminSettingsView: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* SEKSI 3: PERALATAN DAN PERATURAN EVENT (LEAD DEV & ADMIN ONLY) */}
                   <div className="space-y-4 pt-2 border-t-2 border-slate-100">
                     <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
                       <Shield className="w-4 h-4 text-emerald-600" />
@@ -1219,7 +1596,6 @@ export const AdminSettingsView: React.FC = () => {
                     </h4>
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                      {/* Peralatan */}
                       <div className="p-4 bg-amber-50 rounded-2xl border-2 border-amber-300 space-y-2">
                         <label className="block text-xs font-bold text-amber-950">
                           🎒 Teks Peralatan Wajib & Rekomendasi (1 baris per alat)
@@ -1243,7 +1619,6 @@ export const AdminSettingsView: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Peraturan */}
                       <div className="p-4 bg-sky-50 rounded-2xl border-2 border-sky-300 space-y-2">
                         <label className="block text-xs font-bold text-sky-950">
                           🛡️ Teks Peraturan Event (1 baris per peraturan)
@@ -1254,14 +1629,10 @@ export const AdminSettingsView: React.FC = () => {
                           onChange={e => setEditingEvent({ ...editingEvent, rulesText: e.target.value })}
                           className="w-full px-3.5 py-2 text-xs bg-white border-2 border-slate-900 rounded-xl focus:outline-hidden"
                         />
-                        <span className="text-[10px] text-sky-800 block">
-                          Teks ini akan ditampilkan di kartu dan modal detail agenda event kepada semua anggota & pengunjung.
-                        </span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Action Buttons */}
                   <div className="pt-3 border-t-2 border-slate-200 flex items-center justify-end gap-3">
                     <button
                       type="button"
@@ -1283,6 +1654,351 @@ export const AdminSettingsView: React.FC = () => {
               </div>
             </div>
           )}
+
+          {/* EDIT PAST EVENT MODAL */}
+          {editingPastEvent && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs">
+              <div className="relative w-full max-w-2xl bg-white rounded-3xl border-2 border-slate-900 shadow-[8px_8px_0px_0px_#0f172a] max-h-[92vh] overflow-y-auto">
+                <div className="sticky top-0 z-10 p-5 bg-amber-100 border-b-2 border-slate-900 flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-amber-600 text-white">
+                      Edit Arsip Event Selesai
+                    </span>
+                    <h3 className="text-lg font-black text-slate-900 mt-1">
+                      {editingPastEvent.title}
+                    </h3>
+                  </div>
+                  <button
+                    onClick={() => setEditingPastEvent(null)}
+                    className="p-1.5 text-slate-500 hover:text-slate-900 bg-white rounded-xl border border-slate-300"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <form onSubmit={handleSaveEditPastEvent} className="p-6 space-y-4">
+                  <ImageUploadPicker
+                    value={editingPastEvent.imageUrl}
+                    onChange={url => setEditingPastEvent({ ...editingPastEvent, imageUrl: url })}
+                    label="Foto Cover Dokumentasi Event (Galeri HP / Kamera)"
+                    placeholder="https://... atau pilih dari galeri ponsel"
+                    presets={samplePhotoPresets}
+                    helperText="Mendukung upload langsung dari galeri HP"
+                  />
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Judul Event *</label>
+                      <input
+                        type="text"
+                        required
+                        value={editingPastEvent.title}
+                        onChange={e => setEditingPastEvent({ ...editingPastEvent, title: e.target.value })}
+                        className="w-full px-3.5 py-2 text-xs bg-neutral-50 border-2 border-slate-900 rounded-xl"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Tanggal Diselenggarakan *</label>
+                      <input
+                        type="text"
+                        required
+                        value={editingPastEvent.date}
+                        onChange={e => setEditingPastEvent({ ...editingPastEvent, date: e.target.value })}
+                        className="w-full px-3.5 py-2 text-xs bg-neutral-50 border-2 border-slate-900 rounded-xl"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Lokasi Camping Ground *</label>
+                      <input
+                        type="text"
+                        required
+                        value={editingPastEvent.location}
+                        onChange={e => setEditingPastEvent({ ...editingPastEvent, location: e.target.value })}
+                        className="w-full px-3.5 py-2 text-xs bg-neutral-50 border-2 border-slate-900 rounded-xl"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Wilayah *</label>
+                      <select
+                        value={editingPastEvent.region}
+                        onChange={e => setEditingPastEvent({ ...editingPastEvent, region: e.target.value as CampRegion })}
+                        className="w-full px-3.5 py-2 text-xs bg-neutral-50 border-2 border-slate-900 rounded-xl"
+                      >
+                        <option value="Bogor">Bogor</option>
+                        <option value="Cibodas">Cibodas</option>
+                        <option value="Sukabumi">Sukabumi</option>
+                        <option value="Sentul">Sentul</option>
+                        <option value="Puncak">Puncak</option>
+                        <option value="Kepulauan Seribu">Kepulauan Seribu</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Jumlah Peserta Hadir</label>
+                      <input
+                        type="number"
+                        value={editingPastEvent.participantsCount}
+                        onChange={e => setEditingPastEvent({ ...editingPastEvent, participantsCount: Number(e.target.value) })}
+                        className="w-full px-3.5 py-2 text-xs bg-neutral-50 border-2 border-slate-900 rounded-xl"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Ringkasan Singkat Kesuksesan Event</label>
+                    <input
+                      type="text"
+                      value={editingPastEvent.summary}
+                      onChange={e => setEditingPastEvent({ ...editingPastEvent, summary: e.target.value })}
+                      className="w-full px-3.5 py-2 text-xs bg-neutral-50 border-2 border-slate-900 rounded-xl"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Ulasan / Cerita Lengkap Dokumentasi Event</label>
+                    <textarea
+                      rows={3}
+                      value={editingPastEvent.story}
+                      onChange={e => setEditingPastEvent({ ...editingPastEvent, story: e.target.value })}
+                      className="w-full px-3.5 py-2 text-xs bg-neutral-50 border-2 border-slate-900 rounded-xl"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Sorotan Aktivitas (1 baris per poin)</label>
+                    <textarea
+                      rows={2}
+                      value={editingPastEvent.highlightsText}
+                      onChange={e => setEditingPastEvent({ ...editingPastEvent, highlightsText: e.target.value })}
+                      className="w-full px-3.5 py-2 text-xs bg-neutral-50 border-2 border-slate-900 rounded-xl"
+                    />
+                  </div>
+
+                  <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditingPastEvent(null)}
+                      className="px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-slate-700 font-bold text-xs rounded-xl border border-slate-300"
+                    >
+                      Batal
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold text-xs rounded-xl border-2 border-slate-900 shadow-xs flex items-center gap-1.5"
+                    >
+                      <Save className="w-3.5 h-3.5" />
+                      <span>Simpan Perubahan Arsip</span>
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* MANAGE TESTIMONIALS MODAL / DRAWER */}
+          {managingTestimonialsEventId && (() => {
+            const pastObj = pastEvents.find(p => p.id === managingTestimonialsEventId);
+            if (!pastObj) return null;
+            const testimonialsList = pastObj.testimonials || [];
+
+            return (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs">
+                <div className="relative w-full max-w-3xl bg-white rounded-3xl border-2 border-slate-900 shadow-[8px_8px_0px_0px_#0f172a] max-h-[92vh] overflow-y-auto">
+                  <div className="sticky top-0 z-10 p-5 bg-sky-100 border-b-2 border-slate-900 flex items-center justify-between">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-sky-600 text-white">
+                          Pemantauan & Pengeditan Testimoni
+                        </span>
+                        <span className="text-xs font-bold text-sky-900">{pastObj.region}</span>
+                      </div>
+                      <h3 className="text-lg font-black text-slate-900 mt-1">
+                        Testimoni Event: {pastObj.title} ({testimonialsList.length} Testimoni)
+                      </h3>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setManagingTestimonialsEventId(null);
+                        setEditingTestimonial(null);
+                      }}
+                      className="p-1.5 text-slate-500 hover:text-slate-900 bg-white rounded-xl border border-slate-300"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <div className="p-6 space-y-4">
+                    {testimonialsList.length === 0 ? (
+                      <div className="p-8 text-center bg-neutral-50 rounded-2xl border-2 border-dashed border-slate-300 space-y-2">
+                        <MessageSquare className="w-8 h-8 text-slate-400 mx-auto" />
+                        <h4 className="font-bold text-slate-700 text-sm">Belum Ada Testimoni dari Anggota</h4>
+                        <p className="text-xs text-slate-500 max-w-md mx-auto">
+                          Event ini sudah ditandai selesai. Anggota komunitas yang mengikuti event dapat memberikan testimoni langsung melalui halaman Agenda - Arsip Selesai.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {testimonialsList.map(t => {
+                          const isEditingThis = editingTestimonial?.id === t.id;
+
+                          return (
+                            <div
+                              key={t.id}
+                              className="p-4 rounded-2xl border-2 border-slate-200 bg-neutral-50 space-y-3"
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-9 h-9 rounded-full border border-slate-900 overflow-hidden bg-amber-100 shrink-0">
+                                    <img
+                                      src={t.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(t.memberName)}`}
+                                      alt={t.memberName}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  </div>
+                                  <div>
+                                    <div className="flex items-center gap-2">
+                                      <h5 className="font-extrabold text-slate-900 text-xs">{t.memberName}</h5>
+                                      <span className="text-[10px] text-slate-500 font-bold">({t.memberRole || 'Anggota'})</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 text-[10px] text-slate-500 mt-0.5">
+                                      <div className="flex text-amber-500">
+                                        {Array.from({ length: 5 }).map((_, idx) => (
+                                          <Star
+                                            key={idx}
+                                            className={`w-3 h-3 ${idx < (t.rating || 5) ? 'fill-amber-400 text-amber-500' : 'text-slate-300'}`}
+                                          />
+                                        ))}
+                                      </div>
+                                      <span>•</span>
+                                      <span>{t.date || 'Hari ini'}</span>
+                                      {t.memberEmail && (
+                                        <>
+                                          <span>•</span>
+                                          <span className="font-mono text-slate-600">{t.memberEmail}</span>
+                                        </>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  {!isEditingThis && (
+                                    <>
+                                      <button
+                                        type="button"
+                                        onClick={() => setEditingTestimonial({
+                                          eventId: pastObj.id,
+                                          id: t.id,
+                                          comment: t.comment,
+                                          rating: t.rating || 5
+                                        })}
+                                        className="px-2.5 py-1 text-[11px] font-bold bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-lg border border-amber-300 flex items-center gap-1"
+                                      >
+                                        <Edit3 className="w-3 h-3" />
+                                        <span>Edit</span>
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => deleteTestimonialFromPastEvent(pastObj.id, t.id)}
+                                        className="p-1 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                        title="Hapus Testimoni"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Testimonial Photo if uploaded */}
+                              {t.photoUrl && (
+                                <div className="w-24 h-20 rounded-xl border border-slate-300 overflow-hidden bg-slate-200">
+                                  <img src={t.photoUrl} alt="Foto Momen Testimoni" className="w-full h-full object-cover" />
+                                </div>
+                              )}
+
+                              {/* Comment Body / Edit Form */}
+                              {isEditingThis ? (
+                                <form onSubmit={handleSaveEditTestimonial} className="space-y-3 pt-2 border-t border-slate-300">
+                                  <div>
+                                    <label className="block text-[11px] font-bold text-slate-700 mb-1">Ubah Rating Bintang:</label>
+                                    <div className="flex items-center gap-1">
+                                      {[1, 2, 3, 4, 5].map(num => (
+                                        <button
+                                          key={num}
+                                          type="button"
+                                          onClick={() => setEditingTestimonial({ ...editingTestimonial, rating: num })}
+                                          className="p-1"
+                                        >
+                                          <Star
+                                            className={`w-4 h-4 ${num <= editingTestimonial.rating ? 'fill-amber-400 text-amber-500' : 'text-slate-300'}`}
+                                          />
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+
+                                  <div>
+                                    <label className="block text-[11px] font-bold text-slate-700 mb-1">Teks Testimoni:</label>
+                                    <textarea
+                                      rows={3}
+                                      required
+                                      value={editingTestimonial.comment}
+                                      onChange={e => setEditingTestimonial({ ...editingTestimonial, comment: e.target.value })}
+                                      className="w-full px-3 py-2 text-xs bg-white border-2 border-slate-900 rounded-xl"
+                                    />
+                                  </div>
+
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      type="submit"
+                                      className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl flex items-center gap-1 shadow-xs"
+                                    >
+                                      <Check className="w-3.5 h-3.5" />
+                                      <span>Simpan Testimoni</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setEditingTestimonial(null)}
+                                      className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs rounded-xl"
+                                    >
+                                      Batal
+                                    </button>
+                                  </div>
+                                </form>
+                              ) : (
+                                <p className="text-xs text-slate-700 leading-relaxed bg-white p-3 rounded-xl border border-slate-200 italic">
+                                  "{t.comment}"
+                                </p>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    <div className="pt-2 text-right">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setManagingTestimonialsEventId(null);
+                          setEditingTestimonial(null);
+                        }}
+                        className="px-5 py-2 bg-slate-900 text-white font-bold text-xs rounded-xl"
+                      >
+                        Selesai Memantau
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </div>
       )}
 

@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { onSnapshot } from 'firebase/firestore';
+import { SHARED_DATA_DOC, saveSharedDataToFirestore } from '../services/firebaseDb';
 import { User, UserRole } from '../types';
 import { DEFAULT_COMMUNITY_SETTINGS } from '../data/mockData';
 import {
@@ -12,6 +14,7 @@ import { generateWelcomeEmailHtml, SendEmailParams } from '../services/gmailServ
 interface AuthContextType {
   user: User | null;
   isLoggedIn: boolean;
+  isGoogleLoggedIn: boolean;
   role: UserRole | 'none';
   isAdmin: boolean;
   isLeadDeveloper: boolean;
@@ -20,6 +23,8 @@ interface AuthContextType {
   removeAdminEmail: (email: string) => void;
   loginWithGoogleModal: boolean;
   setLoginWithGoogleModal: (open: boolean) => void;
+  editProfileModalOpen: boolean;
+  setEditProfileModalOpen: (open: boolean) => void;
   loginWithCustomGoogle: (email: string, name: string, preferredRole?: UserRole) => void;
   signInWithGoogle: () => Promise<void>;
   quickSwitchRole: (preset: 'none' | 'tamu' | 'anggota' | 'admin') => void;
@@ -33,41 +38,28 @@ interface AuthContextType {
   prepareWelcomeEmail: (targetUser?: User) => void;
 }
 
-const PRESET_USERS: Record<UserRole, User> = {
-  tamu: {
-    id: 'usr-tamu-001',
-    name: 'Rin Shima (Tamu Baru)',
-    email: 'rin.shima.guest@gmail.com',
-    avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=RinCamp&backgroundColor=38bdf8',
-    role: 'tamu',
-    domisili: 'Bogor Selatan',
-    joinDate: 'Oktober 2026',
-    bio: 'Menikmati heningnya solo camp di kaki gunung Salak.'
-  },
-  anggota: {
-    id: 'usr-member-042',
-    name: 'Nadeshiko K. (Anggota Resmi)',
-    email: 'nadeshiko.k@yurucamp.id',
-    avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=NadeshikoCamp&backgroundColor=f59e0b',
-    role: 'anggota',
-    memberId: '#YCJ-042',
-    domisili: 'Jakarta Timur',
-    joinDate: 'Februari 2024',
-    bio: 'Paling suka masak sup ramen nabe dan berbagi cemilan hangat di depan tenda.',
-    tentModel: 'Naturehike Cloud Up 2 & Hot Sand Maker'
-  },
-  admin: {
-    id: 'usr-admin-lead',
-    name: 'Rony Bimawan',
-    email: 'ronybimawan2542@gmail.com',
-    avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=RonyLeadDev&backgroundColor=0284c7',
-    role: 'admin',
-    memberId: '#YCJ-DEV-001',
-    domisili: 'Jakarta Selatan',
-    joinDate: 'November 2023',
-    bio: 'Lead Developer & App Creator Yuru Camp Jabodetabek. Penjaga etika alam dan konfigurasi sistem.',
-    tentModel: 'MSR Hubba Hubba & Trangia Spirit Stove'
-  }
+export const GUEST_SHIMA_RIN: User = {
+  id: 'usr-tamu-rin',
+  name: 'Shima Rin',
+  email: '',
+  avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=RinCamp&backgroundColor=38bdf8',
+  role: 'tamu',
+  domisili: 'Bogor (Tamu)',
+  joinDate: 'Pengunjung',
+  bio: 'Pengunjung santai solo camp di kaki gunung Salak.'
+};
+
+export const ADMIN_RONY: User = {
+  id: 'usr-admin-lead',
+  name: 'Rony Bimawan',
+  email: 'ronybimawan2542@gmail.com',
+  avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=RonyLeadDev&backgroundColor=0284c7',
+  role: 'admin',
+  memberId: '#YCJ-DEV-001',
+  domisili: 'Jakarta Selatan',
+  joinDate: 'November 2023',
+  bio: 'Lead Developer & App Creator Yuru Camp Jabodetabek. Penjaga etika alam dan konfigurasi sistem.',
+  tentModel: 'MSR Hubba Hubba & Trangia Spirit Stove'
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -86,20 +78,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return DEFAULT_COMMUNITY_SETTINGS.adminEmails;
   });
 
-  const [user, setUser] = useState<User | null>(() => {
+  const [user, setUser] = useState<User>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_USER);
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.email !== 'nadeshiko.k@yurucamp.id' && parsed.name !== 'Nadeshiko K. (Anggota Resmi)') {
+          return parsed;
+        }
+      }
     } catch {
       // ignore
     }
-    // Default initial simulation: Tamu (Guest) to let user easily test verification
-    return PRESET_USERS.tamu;
+    return GUEST_SHIMA_RIN;
   });
 
   const [loginWithGoogleModal, setLoginWithGoogleModal] = useState(false);
+  const [editProfileModalOpen, setEditProfileModalOpen] = useState(false);
   const [sendWelcomeEmailModalOpen, setSendWelcomeEmailModalOpen] = useState(false);
   const [welcomeEmailParams, setWelcomeEmailParams] = useState<SendEmailParams | null>(null);
+
+  // Firestore sync for admin emails
+  useEffect(() => {
+    const unsubscribe = onSnapshot(
+      SHARED_DATA_DOC,
+      (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          if (Array.isArray(data.adminEmails)) {
+            setAdminEmails(data.adminEmails);
+          } else if (data.settings && Array.isArray(data.settings.adminEmails)) {
+            setAdminEmails(data.settings.adminEmails);
+          }
+        }
+      },
+      () => {}
+    );
+    return () => unsubscribe();
+  }, []);
 
   const prepareWelcomeEmail = (targetUser?: User) => {
     const u = targetUser || user;
@@ -147,7 +163,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(newUser);
       setLoginWithGoogleModal(false);
 
-      // Siapkan modal konfirmasi pengiriman email sambutan via Gmail
       if (trimmedEmail && accessToken) {
         prepareWelcomeEmail(newUser);
       }
@@ -180,14 +195,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const addAdminEmail = (email: string) => {
     const trimmed = email.trim().toLowerCase();
     if (!trimmed || adminEmails.includes(trimmed)) return;
-    setAdminEmails(prev => [...prev, trimmed]);
+    const updated = [...adminEmails, trimmed];
+    setAdminEmails(updated);
+    saveSharedDataToFirestore({ adminEmails: updated });
   };
 
   const removeAdminEmail = (email: string) => {
     const trimmed = email.trim().toLowerCase();
-    // Protect master dev
     if (trimmed === 'ronybimawan2542@gmail.com') return;
-    setAdminEmails(prev => prev.filter(e => e.toLowerCase() !== trimmed));
+    const updated = adminEmails.filter(e => e.toLowerCase() !== trimmed);
+    setAdminEmails(updated);
+    saveSharedDataToFirestore({ adminEmails: updated });
   };
 
   const checkIsAdmin = (emailToCheck: string | undefined): boolean => {
@@ -224,25 +242,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const quickSwitchRole = (preset: 'none' | 'tamu' | 'anggota' | 'admin') => {
-    if (preset === 'none') {
-      setUser(null);
-    } else {
-      setUser(PRESET_USERS[preset]);
+    if (preset === 'none' || preset === 'tamu') {
+      setUser(GUEST_SHIMA_RIN);
+      try {
+        localStorage.removeItem(STORAGE_KEY_USER);
+      } catch {
+        // ignore
+      }
+    } else if (preset === 'admin') {
+      setUser(ADMIN_RONY);
+    } else if (preset === 'anggota') {
+      setUser({
+        id: 'usr-member-test',
+        name: 'Member Komunitas',
+        email: 'member.test@gmail.com',
+        avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=MemberCamp&backgroundColor=f59e0b',
+        role: 'anggota',
+        memberId: '#YCJ-042',
+        domisili: 'Jakarta Timur',
+        joinDate: 'Oktober 2026',
+        bio: 'Anggota resmi komunitas kemping santai.'
+      });
     }
   };
 
   const logout = () => {
     signOutGoogle().catch(() => {});
-    setUser(null);
+    setUser(GUEST_SHIMA_RIN);
+    try {
+      localStorage.removeItem(STORAGE_KEY_USER);
+    } catch {
+      // ignore
+    }
   };
 
   const updateUserProfile = (data: Partial<User>) => {
-    if (!user) return;
-    setUser(prev => prev ? { ...prev, ...data } : null);
+    setUser(prev => ({ ...prev, ...data }));
   };
 
-  const isLoggedIn = user !== null;
-  const role: UserRole | 'none' = user ? user.role : 'none';
+  const isGoogleLoggedIn = !!user && user.role !== 'tamu' && !!user.email;
+  const isLoggedIn = isGoogleLoggedIn;
+  const role: UserRole | 'none' = user ? user.role : 'tamu';
   const isAdmin = user ? (user.role === 'admin' || checkIsAdmin(user.email)) : false;
   const isLeadDeveloper = user ? user.email.toLowerCase() === 'ronybimawan2542@gmail.com' : false;
   const isGmailReady = !!getCachedAccessToken();
@@ -252,6 +292,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       value={{
         user,
         isLoggedIn,
+        isGoogleLoggedIn,
         role,
         isAdmin,
         isLeadDeveloper,
@@ -260,6 +301,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         removeAdminEmail,
         loginWithGoogleModal,
         setLoginWithGoogleModal,
+        editProfileModalOpen,
+        setEditProfileModalOpen,
         loginWithCustomGoogle,
         signInWithGoogle,
         quickSwitchRole,

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useCamp, ActiveTab } from '../context/CampContext';
 import { CommunityLogo } from './CampIllustration';
+import { EditProfileModal } from './EditProfileModal';
 import { 
   Flame, 
   Volume2, 
@@ -14,11 +15,25 @@ import {
   Menu, 
   X,
   ChevronDown,
-  Mail
+  Mail,
+  Edit3
 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
-  const { user, isLoggedIn, role, isAdmin, setLoginWithGoogleModal, quickSwitchRole, logout, prepareWelcomeEmail } = useAuth();
+  const { 
+    user, 
+    isLoggedIn, 
+    isGoogleLoggedIn,
+    role, 
+    isAdmin, 
+    isLeadDeveloper,
+    setLoginWithGoogleModal, 
+    editProfileModalOpen,
+    setEditProfileModalOpen,
+    quickSwitchRole, 
+    logout, 
+    prepareWelcomeEmail 
+  } = useAuth();
   const { activeTab, setActiveTab, isCampfirePlaying, toggleCampfireSound, settings } = useCamp();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
@@ -114,77 +129,83 @@ export const Navbar: React.FC = () => {
               {isCampfirePlaying ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
             </button>
 
-            {/* Role Simulation Selector Dropdown */}
-            <div className="relative">
-              <button
-                onClick={() => setRoleDropdownOpen(!roleDropdownOpen)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border-2 border-slate-900 bg-white hover:bg-neutral-50 text-xs font-bold text-slate-800 shadow-[2px_2px_0px_0px_#0f172a]"
-              >
+            {/* Role Display: Only Lead Dev sees dropdown, regular users see clean static badge */}
+            {isLeadDeveloper ? (
+              <div className="relative">
+                <button
+                  onClick={() => setRoleDropdownOpen(!roleDropdownOpen)}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border-2 border-slate-900 bg-sky-50 hover:bg-sky-100 text-xs font-bold text-slate-800 shadow-[2px_2px_0px_0px_#0f172a]"
+                  title="Panel Khusus Lead Developer"
+                >
+                  <span className="text-slate-500 font-normal">Role:</span>
+                  <span className="px-1.5 py-0.5 rounded text-[10px] uppercase font-extrabold bg-sky-200 text-sky-900">
+                    Lead Dev
+                  </span>
+                  <ChevronDown className="w-3 h-3 text-slate-500" />
+                </button>
+
+                {roleDropdownOpen && (
+                  <div 
+                    className="absolute right-0 mt-1.5 w-52 bg-white rounded-2xl border-2 border-slate-900 shadow-[4px_4px_0px_0px_#0f172a] p-1.5 z-50 text-xs"
+                    onClick={() => setRoleDropdownOpen(false)}
+                  >
+                    <div className="px-2 py-1 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      Simulasi Pengujian:
+                    </div>
+                    <button
+                      onClick={() => quickSwitchRole('admin')}
+                      className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-neutral-100 font-medium text-slate-800 flex items-center justify-between"
+                    >
+                      <span>Akun Saya (Lead Dev)</span>
+                      {role === 'admin' && <span className="text-sky-600 font-bold">✓</span>}
+                    </button>
+                    <button
+                      onClick={() => quickSwitchRole('anggota')}
+                      className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-neutral-100 font-medium text-slate-800 flex items-center justify-between"
+                    >
+                      <span>Simulasi sbg Anggota</span>
+                      {role === 'anggota' && <span className="text-amber-600 font-bold">✓</span>}
+                    </button>
+                    <button
+                      onClick={() => quickSwitchRole('tamu')}
+                      className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-neutral-100 font-medium text-slate-800 flex items-center justify-between"
+                    >
+                      <span>Simulasi sbg Tamu</span>
+                      {role === 'tamu' && <span className="text-slate-600 font-bold">✓</span>}
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border-2 border-slate-900 bg-white text-xs font-bold shadow-[2px_2px_0px_0px_#0f172a]">
                 <span className="text-slate-500 font-normal">Role:</span>
                 <span className={`px-1.5 py-0.5 rounded text-[10px] uppercase font-extrabold ${
-                  role === 'admin' ? 'bg-sky-200 text-sky-900' :
-                  role === 'anggota' ? 'bg-amber-200 text-amber-900' :
-                  role === 'tamu' ? 'bg-slate-200 text-slate-800' : 'bg-red-100 text-red-700'
+                  role === 'anggota' ? 'bg-amber-200 text-amber-900' : 'bg-slate-200 text-slate-800'
                 }`}>
-                  {role === 'none' ? 'Belum Login' : role === 'admin' ? 'Admin' : role === 'anggota' ? 'Anggota' : 'Tamu'}
+                  {role === 'anggota' ? 'Anggota' : 'Tamu'}
                 </span>
-                <ChevronDown className="w-3 h-3 text-slate-500" />
-              </button>
-
-              {roleDropdownOpen && (
-                <div 
-                  className="absolute right-0 mt-1.5 w-52 bg-white rounded-2xl border-2 border-slate-900 shadow-[4px_4px_0px_0px_#0f172a] p-1.5 z-50 text-xs"
-                  onClick={() => setRoleDropdownOpen(false)}
-                >
-                  <div className="px-2 py-1 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                    Simulasi Cepat Peran:
-                  </div>
-                  <button
-                    onClick={() => quickSwitchRole('tamu')}
-                    className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-neutral-100 font-medium text-slate-800 flex items-center justify-between"
-                  >
-                    <span>Login sbg Tamu (Guest)</span>
-                    {role === 'tamu' && <span className="text-sky-600 font-bold">✓</span>}
-                  </button>
-                  <button
-                    onClick={() => quickSwitchRole('anggota')}
-                    className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-neutral-100 font-medium text-slate-800 flex items-center justify-between"
-                  >
-                    <span>Login sbg Anggota Resmi</span>
-                    {role === 'anggota' && <span className="text-amber-600 font-bold">✓</span>}
-                  </button>
-                  <button
-                    onClick={() => quickSwitchRole('admin')}
-                    className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-neutral-100 font-medium text-slate-800 flex items-center justify-between"
-                  >
-                    <span>Login sbg Admin & Lead Dev</span>
-                    {role === 'admin' && <span className="text-sky-600 font-bold">✓</span>}
-                  </button>
-                  <div className="border-t border-slate-200 my-1" />
-                  <button
-                    onClick={() => quickSwitchRole('none')}
-                    className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-red-50 font-medium text-red-600 flex items-center justify-between"
-                  >
-                    <span>Status: Belum Login</span>
-                    {role === 'none' && <span className="text-red-600 font-bold">✓</span>}
-                  </button>
-                </div>
-              )}
-            </div>
+              </div>
+            )}
 
             {/* Auth Action */}
-            {isLoggedIn && user ? (
+            {isGoogleLoggedIn && user ? (
               <div className="flex items-center gap-2 pl-1">
-                <div className="flex items-center gap-2 bg-neutral-100 pl-2 pr-3 py-1 rounded-xl border border-slate-300">
+                <button
+                  type="button"
+                  onClick={() => setEditProfileModalOpen(true)}
+                  className="flex items-center gap-2 bg-neutral-100 hover:bg-amber-50 pl-2 pr-3 py-1 rounded-xl border border-slate-300 transition-colors cursor-pointer text-left group"
+                  title="Klik untuk Edit Nama & Foto Profil (Galeri HP)"
+                >
                   <div className="w-6 h-6 rounded-lg overflow-hidden border border-slate-900 shrink-0">
                     <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
                   </div>
                   <div className="text-left">
-                    <div className="text-xs font-bold text-slate-900 leading-tight max-w-[100px] truncate">
+                    <div className="text-xs font-bold text-slate-900 leading-tight max-w-[100px] truncate group-hover:text-amber-800">
                       {user.name}
                     </div>
                   </div>
-                </div>
+                  <Edit3 className="w-3 h-3 text-slate-400 group-hover:text-amber-700" />
+                </button>
 
                 <button
                   onClick={logout}
@@ -197,7 +218,7 @@ export const Navbar: React.FC = () => {
             ) : (
               <button
                 onClick={() => setLoginWithGoogleModal(true)}
-                className="flex items-center gap-2 px-3.5 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold text-xs rounded-xl border-2 border-slate-900 shadow-[2px_2px_0px_0px_#0f172a] transition-transform active:translate-y-0.5"
+                className="flex items-center gap-2 px-3.5 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl border-2 border-slate-900 shadow-[2px_2px_0px_0px_#0f172a] transition-transform active:translate-y-0.5"
               >
                 {/* Google icon */}
                 <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">
@@ -218,7 +239,7 @@ export const Navbar: React.FC = () => {
                     d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
                   />
                 </svg>
-                <span>Login Google</span>
+                <span>Login Google (Member)</span>
               </button>
             )}
           </div>
@@ -253,73 +274,114 @@ export const Navbar: React.FC = () => {
               </button>
             ))}
 
-            {isAdmin && (
+            {isLeadDeveloper && (
               <button
                 onClick={() => handleNavClick('settings')}
                 className="text-left px-3 py-2 rounded-xl text-sm font-bold bg-sky-100 text-sky-900 border border-sky-300"
               >
-                ⚙️ Pengaturan Admin
+                ⚙️ Pengaturan Admin &amp; Dev
               </button>
             )}
           </div>
 
           <div className="pt-3 border-t border-slate-200 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-600">Simulasi Role:</span>
-              <div className="flex gap-1">
-                <button
-                  onClick={() => quickSwitchRole('tamu')}
-                  className={`px-2 py-1 text-[11px] rounded font-bold ${role === 'tamu' ? 'bg-sky-500 text-white' : 'bg-neutral-200'}`}
-                >
-                  Tamu
-                </button>
-                <button
-                  onClick={() => quickSwitchRole('anggota')}
-                  className={`px-2 py-1 text-[11px] rounded font-bold ${role === 'anggota' ? 'bg-amber-500 text-slate-900' : 'bg-neutral-200'}`}
-                >
-                  Anggota
-                </button>
-                <button
-                  onClick={() => quickSwitchRole('admin')}
-                  className={`px-2 py-1 text-[11px] rounded font-bold ${role === 'admin' ? 'bg-slate-900 text-white' : 'bg-neutral-200'}`}
-                >
-                  Admin
-                </button>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between pt-1">
-              {isLoggedIn && user ? (
-                <div className="flex items-center justify-between w-full">
-                  <div className="flex items-center gap-2">
-                    <img src={user.avatar} alt={user.name} className="w-8 h-8 rounded-lg border border-slate-900" />
-                    <div>
-                      <div className="text-xs font-bold text-slate-900">{user.name}</div>
-                      <div className="text-[10px] text-slate-500">{user.email}</div>
-                    </div>
-                  </div>
+            {/* If lead dev, show role testing tools */}
+            {isLeadDeveloper && (
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-600">Simulasi Role (Lead Dev):</span>
+                <div className="flex gap-1">
                   <button
-                    onClick={logout}
-                    className="px-3 py-1.5 text-xs font-bold text-red-600 bg-red-50 border border-red-200 rounded-lg"
+                    onClick={() => quickSwitchRole('admin')}
+                    className={`px-2 py-1 text-[11px] rounded font-bold ${role === 'admin' ? 'bg-sky-600 text-white' : 'bg-neutral-200'}`}
                   >
-                    Logout
+                    Admin
+                  </button>
+                  <button
+                    onClick={() => quickSwitchRole('anggota')}
+                    className={`px-2 py-1 text-[11px] rounded font-bold ${role === 'anggota' ? 'bg-amber-500 text-slate-900' : 'bg-neutral-200'}`}
+                  >
+                    Anggota
+                  </button>
+                  <button
+                    onClick={() => quickSwitchRole('tamu')}
+                    className={`px-2 py-1 text-[11px] rounded font-bold ${role === 'tamu' ? 'bg-slate-700 text-white' : 'bg-neutral-200'}`}
+                  >
+                    Tamu
                   </button>
                 </div>
+              </div>
+            )}
+
+            <div className="pt-1">
+              {isGoogleLoggedIn && user ? (
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between p-2.5 bg-neutral-100 rounded-2xl border border-slate-300">
+                    <div className="flex items-center gap-2">
+                      <img src={user.avatar} alt={user.name} className="w-9 h-9 rounded-xl border border-slate-900 object-cover" />
+                      <div>
+                        <div className="text-xs font-extrabold text-slate-900">{user.name}</div>
+                        <div className="text-[10px] text-slate-500 font-mono">{user.email}</div>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-lg bg-amber-200 text-amber-950 border border-amber-300">
+                      {role === 'admin' ? 'Lead Dev' : 'Anggota'}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        setEditProfileModalOpen(true);
+                      }}
+                      className="flex-1 py-2 px-3 text-xs font-bold text-slate-900 bg-amber-400 hover:bg-amber-300 border-2 border-slate-900 rounded-xl flex items-center justify-center gap-1.5 shadow-xs"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                      <span>Edit Profil &amp; Foto Galeri</span>
+                    </button>
+                    <button
+                      onClick={logout}
+                      className="px-3.5 py-2 text-xs font-bold text-red-600 bg-red-50 border border-red-200 rounded-xl hover:bg-red-100"
+                    >
+                      Logout
+                    </button>
+                  </div>
+                </div>
               ) : (
-                <button
-                  onClick={() => {
-                    setLoginWithGoogleModal(true);
-                    setMobileMenuOpen(false);
-                  }}
-                  className="w-full py-2.5 bg-amber-500 text-slate-900 font-bold text-xs rounded-xl border-2 border-slate-900"
-                >
-                  Login with Google
-                </button>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between px-1">
+                    <span className="text-xs font-bold text-slate-600">Status Anda:</span>
+                    <span className="px-2 py-0.5 bg-slate-200 text-slate-800 text-[10px] font-extrabold rounded-md uppercase">
+                      Tamu (Shima Rin)
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setLoginWithGoogleModal(true);
+                      setMobileMenuOpen(false);
+                    }}
+                    className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs rounded-xl border-2 border-slate-900 flex items-center justify-center gap-2 shadow-xs"
+                  >
+                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">
+                      <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
+                      <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"/>
+                      <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.98 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
+                      <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+                    </svg>
+                    <span>Login Google sebagai Member</span>
+                  </button>
+                </div>
               )}
             </div>
           </div>
         </div>
       )}
+
+      {/* Edit Profile & Photo Modal */}
+      <EditProfileModal
+        isOpen={editProfileModalOpen}
+        onClose={() => setEditProfileModalOpen(false)}
+      />
     </header>
   );
 };

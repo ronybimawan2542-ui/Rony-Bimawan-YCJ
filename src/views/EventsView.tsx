@@ -42,6 +42,7 @@ export const EventsView: React.FC = () => {
   const q = searchQuery.toLowerCase().trim();
 
   const filteredUpcoming = events.filter(e => {
+    if (e.status === 'completed') return false;
     const matchRegion = selectedRegion === 'all' || e.region === selectedRegion;
     const matchSearch = !q || 
       e.title.toLowerCase().includes(q) || 
